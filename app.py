@@ -4,6 +4,7 @@ import folium
 from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
+import os
 
 try:
     from shapely.geometry import LineString, Point
@@ -14,6 +15,36 @@ except ImportError:
 
 # Set page config first
 st.set_page_config(layout="wide")
+
+# Visitor counter function
+def get_visitor_count():
+    count_file = "visitor_count.txt"
+    
+    # Initialize count
+    if not os.path.exists(count_file):
+        with open(count_file, "w") as f:
+            f.write("0")
+        count = 0
+    else:
+        # Read current count
+        try:
+            with open(count_file, "r") as f:
+                count = int(f.read().strip())
+        except:
+            count = 0
+    
+    # Check if this is a new session
+    if "counted" not in st.session_state:
+        st.session_state.counted = True
+        # Increment and save
+        count += 1
+        with open(count_file, "w") as f:
+            f.write(str(count))
+    
+    return count
+
+# Get visitor count
+visitor_count = get_visitor_count()
 
 # Hide default Streamlit footer and add padding
 st.markdown(
@@ -213,7 +244,7 @@ with main_content:
 
 # Create footer using native Streamlit elements
 st.markdown("<div class='custom-footer'>", unsafe_allow_html=True)
-footer_cols = st.columns([3, 1])
+footer_cols = st.columns([2, 1, 1])
 with footer_cols[0]:
     st.markdown("""
     The four proposed routes and their distance calculations are based on the most recent SANDAG documentation.
@@ -222,5 +253,9 @@ with footer_cols[1]:
     st.markdown("""
     **Created by:** Nathan Qiu  
     **Contact:** [nathanqiu07@gmail.com](mailto:nathanqiu07@gmail.com)
+    """)
+with footer_cols[2]:
+    st.markdown(f"""
+    **Visitors:** {visitor_count:,}
     """)
 st.markdown("</div>", unsafe_allow_html=True)
