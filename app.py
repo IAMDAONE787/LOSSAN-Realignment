@@ -4,7 +4,13 @@ import folium
 from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
-from shapely.geometry import LineString, Point
+
+try:
+    from shapely.geometry import LineString, Point
+except ImportError:
+    st.error("Failed to import Shapely. Please check your installation.")
+    LineString = None
+    Point = None
 
 st.set_page_config(layout="wide")
 st.title("LOSSAN Rail Realignment Explorer")
@@ -124,6 +130,11 @@ if location:
 
         # geodesic distance in meters
         dist_m = geodesic(addr_pt, (nearest_lat, nearest_lon)).meters
+        
+        # Convert to different units and round
+        dist_m_rounded = round(dist_m / 10) * 10  # Round to nearest 10 meters
+        dist_km = round(dist_m / 1000, 1)  # Round to 0.1 km
+        dist_miles = round(dist_m * 0.000621371, 1)  # Round to 0.1 miles
 
         # draw a connector
         folium.PolyLine(
@@ -133,7 +144,10 @@ if location:
             dash_array="5,5"
         ).add_to(m)
 
-        st.sidebar.write(f"**{name}:** {dist_m:.0f} m")
+        st.sidebar.write(f"**{name}:**")
+        st.sidebar.write(f"- {dist_m_rounded} m")
+        st.sidebar.write(f"- {dist_km} km")
+        st.sidebar.write(f"- {dist_miles} mi")
 
 # --- 4. render ---
 st_folium(m, height=600, width=900)
