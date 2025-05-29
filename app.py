@@ -216,7 +216,7 @@ st.markdown("<div class='custom-footer'>", unsafe_allow_html=True)
 footer_cols = st.columns([3, 1])
 with footer_cols[0]:
     st.markdown("""
-    **Disclaimer:** The displayed tracks and distance calculations are close estimates based on the routes displayed on the LOSSAN website.
+    The four proposed routes and their distance calculations are based on the most recent SANDAG documentation.
     """)
 with footer_cols[1]:
     st.markdown("""
