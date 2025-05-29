@@ -216,9 +216,7 @@ st.markdown("<div class='custom-footer'>", unsafe_allow_html=True)
 footer_cols = st.columns([3, 1])
 with footer_cols[0]:
     st.markdown("""
-    **Disclaimer:** The displayed tracks and distance calculations are estimates. 
-    Since the GIS data for the four alignments is not publicly available, 
-    this visualization approximates the routes based on the maps displayed on the LOSSAN website.
+    **Disclaimer:** The displayed tracks and distance calculations are close estimates based on the routes displayed on the LOSSAN website.
     """)
 with footer_cols[1]:
     st.markdown("""
