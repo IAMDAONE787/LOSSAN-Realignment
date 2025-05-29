@@ -12,46 +12,51 @@ except ImportError:
     LineString = None
     Point = None
 
+# Set page config first
 st.set_page_config(layout="wide")
 
-# Add CSS for fixed footer
+# Hide default Streamlit footer and add padding
 st.markdown(
     """
     <style>
-    .footer {
+    footer {visibility: hidden;}
+    /* Make the main content area fill available space but not overflow */
+    .main {
+        flex: 1 1 auto;
+        overflow: auto;
+    }
+    /* Make overall container fill the viewport exactly */
+    .stApp {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+    /* Fix the footer at the bottom */
+    .custom-footer {
         position: fixed;
         bottom: 0;
-        right: 0;
         left: 0;
+        right: 0;
         background-color: white;
-        color: black;
-        text-align: left;
-        padding: 10px 24px;
+        padding: 10px 20px;
         border-top: 1px solid #ddd;
         z-index: 999;
-        margin-left: var(--sidebar-width, 0px);
     }
-    /* When sidebar is collapsed, adjust footer */
-    [data-testid="stSidebar"][aria-expanded="false"] ~ .footer {
-        margin-left: 0;
+    /* Ensure content doesn't get hidden behind the footer */
+    [data-testid="stAppViewBlockContainer"] {
+        padding-bottom: 60px;
     }
-    /* Ensure content doesn't get hidden behind footer */
-    .main-content {
-        margin-bottom: 100px;
+    /* Adjust for sidebar */
+    [data-testid="stSidebar"][aria-expanded="true"] ~ div .custom-footer {
+        left: var(--sidebar-width, 22rem);
     }
-    /* Make footer content responsive */
-    @media screen and (max-width: 768px) {
-        .footer-container {
-            flex-direction: column;
-        }
-        .footer-disclaimer {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .footer-contact {
-            width: 100%;
-            text-align: left;
-        }
+    [data-testid="stSidebar"][aria-expanded="false"] ~ div .custom-footer {
+        left: 0;
+    }
+    /* Adjust the height of the map container */
+    iframe {
+        height: calc(100vh - 200px) !important;
     }
     </style>
     """,
@@ -199,24 +204,25 @@ with main_content:
             st.sidebar.write(f"- {dist_miles} mi")
 
     # --- 4. render ---
-    st_folium(m, height=550, width=900)  # Reduced height to make room for footer
+    # Set the map height to fill available space while leaving room for header and footer
+    st_folium(m, width="100%")
 
 # --- 5. Footer with credits and disclaimer ---
-st.markdown(
-    """
-    <div class="footer">
-        <div class="footer-container" style="display: flex; justify-content: space-between; flex-wrap: wrap;">
-            <div class="footer-disclaimer" style="width: 75%; min-width: 200px;">
-                <strong>Disclaimer:</strong> The displayed tracks and distance calculations are estimates. 
-                Since the GIS data for the four alignments is not publicly available, 
-                this visualization approximates the routes based on the maps displayed on the LOSSAN website.
-            </div>
-            <div class="footer-contact" style="width: 23%; min-width: 180px; text-align: right;">
-                <strong>Created by:</strong> Nathan Qiu<br>
-                <strong>Contact:</strong> <a href="mailto:nathanqiu07@gmail.com">nathanqiu07@gmail.com</a>
-            </div>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Remove the spacer as we're using fixed positioning
+# st.markdown("<div style='flex-grow: 1;'></div>", unsafe_allow_html=True)
+
+# Create footer using native Streamlit elements
+st.markdown("<div class='custom-footer'>", unsafe_allow_html=True)
+footer_cols = st.columns([3, 1])
+with footer_cols[0]:
+    st.markdown("""
+    **Disclaimer:** The displayed tracks and distance calculations are estimates. 
+    Since the GIS data for the four alignments is not publicly available, 
+    this visualization approximates the routes based on the maps displayed on the LOSSAN website.
+    """)
+with footer_cols[1]:
+    st.markdown("""
+    **Created by:** Nathan Qiu  
+    **Contact:** [nathanqiu07@gmail.com](mailto:nathanqiu07@gmail.com)
+    """)
+st.markdown("</div>", unsafe_allow_html=True)
