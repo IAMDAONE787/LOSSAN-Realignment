@@ -71,7 +71,7 @@ main_content = st.container()
 with main_content:
     # --- 1. define your four alignments (lat, lon) lists here ---
     ALIGNMENTS = {
-        "San Dieguito → I-5": {
+        "Yellow Route: San Dieguito → I-5": {
             "coords": [
                 (32.9720408, -117.2664554),
                 (32.9697782, -117.2616609),
@@ -85,7 +85,7 @@ with main_content:
             ],
             "color": "orange",
         },
-        "Under Crest Canyon": {
+        "Blue Route: Under Crest Canyon": {
             "coords": [
                 (32.9720408, -117.2664554),
                 (32.9676162, -117.2653677),
@@ -99,7 +99,7 @@ with main_content:
             ],
             "color": "blue",
         },
-        "Under Camino Del Mar": {
+        "Purple Route: Under Camino Del Mar": {
             "coords": [
                 (32.9720408, -117.2664554),
                 (32.9676162, -117.2653677),
@@ -112,7 +112,7 @@ with main_content:
             ],
             "color": "magenta",
         },
-        "Del Mar Bluffs Double-Track": {
+        "Green Route: Del Mar Bluffs Double-Track": {
             "coords": [
                 (32.9720408, -117.2664554),
                 (32.9676162, -117.2653677),
