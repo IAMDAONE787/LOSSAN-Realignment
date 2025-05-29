@@ -151,3 +151,20 @@ if location:
 
 # --- 4. render ---
 st_folium(m, height=600, width=900)
+
+# --- 5. Footer with credits and disclaimer ---
+st.markdown("---")
+footer_col1, footer_col2 = st.columns([3, 1])
+
+with footer_col1:
+    st.markdown("""
+    **Disclaimer:** The displayed tracks and distance calculations are estimates. 
+    Since the GIS data for the four alignments is not publicly available, 
+    this visualization approximates the routes based on the maps displayed on the LOSSAN website.
+    """)
+    
+with footer_col2:
+    st.markdown("""
+    **Created by:** Nathan Qiu  
+    **Contact:** [nathanqiu07@gmail.com](mailto:nathanqiu07@gmail.com)
+    """)
