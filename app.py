@@ -20,18 +20,38 @@ st.markdown(
     <style>
     .footer {
         position: fixed;
-        left: 0;
         bottom: 0;
-        width: 100%;
+        right: 0;
+        left: 0;
         background-color: white;
         color: black;
         text-align: left;
-        padding: 10px;
+        padding: 10px 24px;
         border-top: 1px solid #ddd;
         z-index: 999;
+        margin-left: var(--sidebar-width, 0px);
     }
+    /* When sidebar is collapsed, adjust footer */
+    [data-testid="stSidebar"][aria-expanded="false"] ~ .footer {
+        margin-left: 0;
+    }
+    /* Ensure content doesn't get hidden behind footer */
     .main-content {
-        margin-bottom: 100px; /* Add space for footer */
+        margin-bottom: 100px;
+    }
+    /* Make footer content responsive */
+    @media screen and (max-width: 768px) {
+        .footer-container {
+            flex-direction: column;
+        }
+        .footer-disclaimer {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .footer-contact {
+            width: 100%;
+            text-align: left;
+        }
     }
     </style>
     """,
@@ -185,13 +205,13 @@ with main_content:
 st.markdown(
     """
     <div class="footer">
-        <div style="display: flex; justify-content: space-between;">
-            <div style="width: 75%;">
+        <div class="footer-container" style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+            <div class="footer-disclaimer" style="width: 75%; min-width: 200px;">
                 <strong>Disclaimer:</strong> The displayed tracks and distance calculations are estimates. 
                 Since the GIS data for the four alignments is not publicly available, 
                 this visualization approximates the routes based on the maps displayed on the LOSSAN website.
             </div>
-            <div style="width: 25%; text-align: right;">
+            <div class="footer-contact" style="width: 23%; min-width: 180px; text-align: right;">
                 <strong>Created by:</strong> Nathan Qiu<br>
                 <strong>Contact:</strong> <a href="mailto:nathanqiu07@gmail.com">nathanqiu07@gmail.com</a>
             </div>
