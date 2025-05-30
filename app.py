@@ -4,9 +4,6 @@ import folium
 from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
-import os
-import requests
-import json
 
 try:
     from shapely.geometry import LineString, Point
@@ -17,40 +14,6 @@ except ImportError:
 
 # Set page config first
 st.set_page_config(layout="wide")
-
-# Visitor counter function using CountAPI (free, cloud-based counter)
-def get_visitor_count():
-    # Using CountAPI.xyz service - creating a namespace for this app
-    namespace = "lossanrealignment"
-    key = "visitors"
-    
-    # Check if we've already counted this session
-    if "counted" not in st.session_state:
-        # Hit the API to increment the counter
-        try:
-            response = requests.get(f"https://api.countapi.xyz/hit/{namespace}/{key}")
-            data = response.json()
-            count = data.get("value", 0)
-        except Exception as e:
-            st.write(f"Error updating visitor count: {e}")
-            count = 0
-        
-        # Mark this session as counted
-        st.session_state.counted = True
-    else:
-        # Just get the current count without incrementing
-        try:
-            response = requests.get(f"https://api.countapi.xyz/get/{namespace}/{key}")
-            data = response.json()
-            count = data.get("value", 0)
-        except Exception as e:
-            # Silently fail on subsequent checks
-            count = 0
-    
-    return count
-
-# Get visitor count at app startup
-visitor_count = get_visitor_count()
 
 # Hide default Streamlit footer and add padding
 st.markdown(
@@ -250,7 +213,7 @@ with main_content:
 
 # Create footer using native Streamlit elements
 st.markdown("<div class='custom-footer'>", unsafe_allow_html=True)
-footer_cols = st.columns([2, 1, 1])
+footer_cols = st.columns([3, 1])
 with footer_cols[0]:
     st.markdown("""
     The four proposed routes and their distance calculations are based on the most recent SANDAG documentation.
@@ -259,9 +222,5 @@ with footer_cols[1]:
     st.markdown("""
     **Created by:** Nathan Qiu  
     **Contact:** [nathanqiu07@gmail.com](mailto:nathanqiu07@gmail.com)
-    """)
-with footer_cols[2]:
-    st.markdown(f"""
-    **Visitors:** {visitor_count:,}
     """)
 st.markdown("</div>", unsafe_allow_html=True)
