@@ -5,6 +5,8 @@ from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 import os
+import requests
+import json
 
 try:
     from shapely.geometry import LineString, Point
@@ -16,34 +18,38 @@ except ImportError:
 # Set page config first
 st.set_page_config(layout="wide")
 
-# Visitor counter function
+# Visitor counter function using CountAPI (free, cloud-based counter)
 def get_visitor_count():
-    count_file = "visitor_count.txt"
+    # Using CountAPI.xyz service - creating a namespace for this app
+    namespace = "lossanrealignment"
+    key = "visitors"
     
-    # Initialize count
-    if not os.path.exists(count_file):
-        with open(count_file, "w") as f:
-            f.write("0")
-        count = 0
-    else:
-        # Read current count
-        try:
-            with open(count_file, "r") as f:
-                count = int(f.read().strip())
-        except:
-            count = 0
-    
-    # Check if this is a new session
+    # Check if we've already counted this session
     if "counted" not in st.session_state:
+        # Hit the API to increment the counter
+        try:
+            response = requests.get(f"https://api.countapi.xyz/hit/{namespace}/{key}")
+            data = response.json()
+            count = data.get("value", 0)
+        except Exception as e:
+            st.write(f"Error updating visitor count: {e}")
+            count = 0
+        
+        # Mark this session as counted
         st.session_state.counted = True
-        # Increment and save
-        count += 1
-        with open(count_file, "w") as f:
-            f.write(str(count))
+    else:
+        # Just get the current count without incrementing
+        try:
+            response = requests.get(f"https://api.countapi.xyz/get/{namespace}/{key}")
+            data = response.json()
+            count = data.get("value", 0)
+        except Exception as e:
+            # Silently fail on subsequent checks
+            count = 0
     
     return count
 
-# Get visitor count
+# Get visitor count at app startup
 visitor_count = get_visitor_count()
 
 # Hide default Streamlit footer and add padding
