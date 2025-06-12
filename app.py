@@ -79,6 +79,9 @@ st.markdown(
     iframe {
         height: calc(100vh - 200px) !important;
     }
+    .folium-map .leaflet-pane path:not(.yellow-bridge-overlay) {
+        pointer-events: none !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -92,20 +95,6 @@ main_content = st.container()
 with main_content:
     # --- 1. define your four alignments (lat, lon) lists here ---
     ALIGNMENTS = {
-        "Blue Route: Under Crest Canyon": {
-            "coords": [
-                (32.9720408, -117.2664554),
-                (32.9676162, -117.2653677),
-                (32.9636421, -117.2633048),
-                (32.9558076, -117.2566718),
-                (32.9491315, -117.2547255),
-                (32.9383269, -117.2473140),
-                (32.9306534, -117.2445875),
-                (32.9251512, -117.2425307),
-                (32.9162438, -117.2371537),
-            ],
-            "color": "blue",
-        },
         "Purple Route: Under Camino Del Mar": {
             "coords": [
                 (32.9720408, -117.2664554),
@@ -328,10 +317,10 @@ with main_content:
     # Define segments for the Yellow route
     
     # First tangent segment
-    yellow_alignment.add_tangent("20+00", "24+04.67", name="Initial Tangent")
+    yellow_first_tangent = yellow_alignment.add_tangent("20+00", "24+04.67", name="Initial Tangent")
     
     # First spiral-curve-spiral segment
-    yellow_alignment.add_curve(
+    yellow_first_curve = yellow_alignment.add_curve(
         ts_station="24+04.67", 
         sc_station="25+44.67", 
         cs_station="30+43.75", 
@@ -342,10 +331,10 @@ with main_content:
     )
     
     # Second tangent segment
-    yellow_alignment.add_tangent("31+83.75", "37+45.96", name="Middle Tangent")
+    yellow_second_tangent = yellow_alignment.add_tangent("31+83.75", "37+45.96", name="Middle Tangent")
     
     # Second spiral-curve-spiral segment
-    yellow_alignment.add_curve(
+    yellow_second_curve = yellow_alignment.add_curve(
         ts_station="37+45.96", 
         sc_station="39+05.96",  # 39+05.96 = 37+45.96 + 160' (corrected spiral length)
         cs_station="40+60.67", 
@@ -356,14 +345,14 @@ with main_content:
     )
     
     # Third tangent segment (extended alignment)
-    extended_tangent = yellow_alignment.add_tangent("42+20.67", "75+17.38", name="Extended Tangent")
+    yellow_third_tangent = yellow_alignment.add_tangent("42+20.67", "75+17.38", name="Extended Tangent")
     
     # Manually set bearing for the extended tangent
     # This is useful to follow the coastline more accurately
-    extended_tangent.manual_bearing = 142.25  # Southeast direction (0=North, 90=East, 180=South)
+    yellow_third_tangent.manual_bearing = 142.25  # Southeast direction (0=North, 90=East, 180=South)
     
     # Third spiral-curve-spiral segment
-    yellow_alignment.add_curve(
+    yellow_third_curve = yellow_alignment.add_curve(
         ts_station="75+17.38", 
         sc_station="79+17.38",  # 79+17.38 = 75+17.38 + 400' (spiral length)
         cs_station="87+52.17", 
@@ -374,10 +363,10 @@ with main_content:
     )
     
     # Fourth tangent segment
-    yellow_alignment.add_tangent("91+52.17", "94+72.45", name="Fourth Tangent")
+    yellow_fourth_tangent = yellow_alignment.add_tangent("91+52.17", "94+72.45", name="Fourth Tangent")
     
     # Fourth spiral-curve-spiral segment
-    yellow_alignment.add_curve(
+    yellow_fourth_curve = yellow_alignment.add_curve(
         ts_station="94+72.45", 
         sc_station="98+72.45",  # 98+72.45 = 94+72.45 + 400' (spiral length)
         cs_station="119+62.32", 
@@ -388,11 +377,11 @@ with main_content:
     )
     
     # Fifth tangent segment
-    fifth_tangent = yellow_alignment.add_tangent("123+62.32", "162+59.46", name="Fifth Tangent")
-    fifth_tangent.manual_bearing = 171  # Southeast direction (0=North, 90=East, 180=South)
+    yellow_fifth_tangent = yellow_alignment.add_tangent("123+62.32", "162+59.46", name="Fifth Tangent")
+    yellow_fifth_tangent.manual_bearing = 171  # Southeast direction (0=North, 90=East, 180=South)
     
     # Fifth spiral-curve-spiral segment
-    yellow_alignment.add_curve(
+    yellow_fifth_curve = yellow_alignment.add_curve(
         ts_station="162+59.46", 
         sc_station="169+09.46",  # 169+09.46 = 162+59.46 + 650' (spiral length)
         cs_station="175+18.79",  # Note: This was labeled as SC in the query but should be CS
@@ -403,10 +392,10 @@ with main_content:
     )
     
     # Sixth tangent segment
-    yellow_alignment.add_tangent("181+68.79", "196+22.24", name="Sixth Tangent")
+    yellow_sixth_tangent = yellow_alignment.add_tangent("181+68.79", "196+22.24", name="Sixth Tangent")
     
     # Sixth spiral-curve-spiral segment (MT1 CURVE #6)
-    yellow_alignment.add_curve(
+    yellow_sixth_curve = yellow_alignment.add_curve(
         ts_station="196+22.24", 
         sc_station="202+72.24",  # 202+72.24 = 196+22.24 + 650' (spiral length from box)
         cs_station="208+28.94", 
@@ -417,10 +406,10 @@ with main_content:
     )
     
     # Seventh tangent segment
-    seventh_tangent = yellow_alignment.add_tangent("214+78.94", "235+49.79", name="Seventh Tangent")
+    yellow_seventh_tangent = yellow_alignment.add_tangent("214+78.94", "235+49.79", name="Seventh Tangent")
     
     # Seventh spiral-curve-spiral segment (CURVE #7)
-    yellow_alignment.add_curve(
+    yellow_seventh_curve = yellow_alignment.add_curve(
         ts_station="235+49.79", 
         sc_station="242+29.79",  # 242+29.79 = 235+49.79 + 680' (spiral length)
         cs_station="275+32.84", 
@@ -431,10 +420,10 @@ with main_content:
     )
     
     # Eighth tangent segment
-    eighth_tangent = yellow_alignment.add_tangent("282+12.84", "285+53.12", name="Eighth Tangent")
+    yellow_eighth_tangent = yellow_alignment.add_tangent("282+12.84", "285+53.12", name="Eighth Tangent")
     
     # Eighth spiral-curve-spiral segment (CURVE #8)
-    yellow_alignment.add_curve(
+    yellow_eighth_curve = yellow_alignment.add_curve(
         ts_station="285+53.12", 
         sc_station="287+93.12",  # 287+93.12 = 285+53.12 + 240' (spiral length)
         cs_station="294+53.38", 
@@ -445,48 +434,634 @@ with main_content:
     )
     
     # Ninth tangent segment
-    ninth_tangent = yellow_alignment.add_tangent("296+93.38", "304+93.02", name="Ninth Tangent")
+    yellow_ninth_tangent = yellow_alignment.add_tangent("296+93.38", "304+93.02", name="Ninth Tangent")
+    
+    # === BLUE TRACK ENGINEERING MODEL ===
+    # Create the blue track using the engineering specifications and directly add to map
+
+    # Create a new Railway Alignment for the Blue route
+    blue_alignment = RailwayAlignment(name="Blue Route: Under Crest Canyon", color="blue")
+    
+    # Add reference points for the blue track
+    blue_sta_500_coords = (32.9731225, -117.2667758)  # 5+00 station
+    blue_sta_1000_coords = (32.9717752, -117.2664515)  # 10+00 station
+    
+    blue_alignment.add_reference_point("STA_500", blue_sta_500_coords, 500)
+    blue_alignment.add_reference_point("STA_1000", blue_sta_1000_coords, 1000)
+    
+    # Calculate track parameters based on reference points
+    blue_track_params = blue_alignment.calculate_track_params("STA_500", "STA_1000")
+    
+    # Define segments for the Blue route - initial tangent
+    blue_first_tangent = blue_alignment.add_tangent("5+00", "17+46.12", name="Initial Tangent")
+    
+    # Add a curve similar to the first segment of the original blue route
+    blue_first_curve = blue_alignment.add_curve(
+        ts_station="17+46.12",
+        sc_station="23+96.12",
+        cs_station="54+05.81",
+        st_station="60+55.81",
+        degree_of_curve="0 48'00\"",
+        direction="right",
+        name="First Curve"
+    )
+    
+    # Add next tangent
+    blue_second_tangent = blue_alignment.add_tangent("60+55.81", "64+00.52", name="Second Tangent")
+    blue_second_tangent.manual_bearing = 141.5  # Southeast direction (0=North, 90=East, 180=South)
+
+    # Add second curve (sharper turn toward southeast)
+    blue_second_curve = blue_alignment.add_curve(
+        ts_station="64+00.52",
+        sc_station="70+80.52",
+        cs_station="96+80.99",
+        st_station="103+60.99",
+        degree_of_curve="0 49'35\"",
+        direction="left",
+        name="Second Curve"
+    )
+    
+    # Add third tangent going southeast
+    blue_third_tangent = blue_alignment.add_tangent("103+60.99", "116+60.92", name="Third Tangent")
+    
+    # Add the curve near Del Mar Heights Road
+    blue_third_curve = blue_alignment.add_curve(
+        ts_station="116+60.92",
+        sc_station="123+40.92",
+        cs_station="146+18.69",
+        st_station="152+98.69",
+        degree_of_curve="0 49'35\"",
+        direction="right",
+        name="Third Curve"
+    )
+    
+    # Add fourth tangent 
+    blue_fourth_tangent = blue_alignment.add_tangent("152+98.69", "156+48.69", name="Fourth Tangent")
+    blue_fourth_tangent.manual_bearing = 141.5
+    
+    # Add fourth curve to align with endpoint
+    blue_fourth_curve = blue_alignment.add_curve(
+        ts_station="156+48.69",
+        sc_station="163+28.69",
+        cs_station="192+18.38",
+        st_station="198+98.38",
+        degree_of_curve="0 49'35\"",
+        direction="left",
+        name="Fourth Curve"
+    )
+    
+    # Add fifth tangent to reach the end point
+    blue_fifth_tangent = blue_alignment.add_tangent("198+98.38", "204+89.02", name="Fifth Tangent")
+    #blue_fifth_tangent.manual_bearing = 170  # Southeast direction (0=North, 90=East, 180=South)
+    
+    # Add fifth curve
+    blue_fifth_curve = blue_alignment.add_curve(
+        ts_station="204+89.02",
+        sc_station="211+69.02",
+        cs_station="244+71.53",
+        st_station="251+51.53",
+        degree_of_curve="0 49'11\"",
+        direction="right",
+        name="Fifth Curve"
+    )
+    
+    # Add sixth tangent
+    blue_sixth_tangent = blue_alignment.add_tangent("251+51.53", "255+07.34", name="Sixth Tangent")
+    
+    # Add sixth curve
+    blue_sixth_curve = blue_alignment.add_curve(
+        ts_station="255+07.34",
+        sc_station="257+27.34",
+        cs_station="264+05.11",
+        st_station="266+25.11",
+        degree_of_curve="0 15'00\"",
+        direction="left",
+        name="Sixth Curve"
+    )
+
+    blue_seventh_tangent = blue_alignment.add_tangent("266+25.11", "274+32.35", name="Seventh Tangent")
+    blue_seventh_tangent.manual_bearing = 135
+
+    # Add CSS to disable hover/tooltips on original polylines
+    css = """
+    <style>
+    .folium-map .leaflet-pane path:not(.yellow-bridge-overlay) {
+        pointer-events: none !important;
+    }
+    </style>
+    """
+    
+    # Add the CSS to the map
+    m.get_root().html.add_child(folium.Element(css))
     
     # Add the entire alignment to the map
     yellow_alignment.add_to_map(
         m=m, 
         start_ref_point_name="STA_2000", 
-        track_params=track_params
+        track_params=track_params,
+        add_markers=False  # Hide all pin points
     )
     
-    # Add animated outline to each segment of the yellow alignment
-    for i, segment in enumerate(yellow_alignment.segments):
-        segment_name = segment.name
-        segment_tooltip = segment.name
+    # Add the blue alignment to the map
+    blue_alignment.add_to_map(
+        m=m,
+        start_ref_point_name="STA_500",
+        track_params=blue_track_params,
+        add_markers=False  # Hide all pin points
+    )
+    
+    # Add an animated blue path overlay
+    if blue_alignment.all_coords:
+        # Add a solid base line
+        folium.PolyLine(
+            locations=blue_alignment.all_coords,
+            color='blue',
+            weight=7,
+            opacity=0.7,
+            tooltip="Blue Route: Under Crest Canyon"
+        ).add_to(m)
         
-        if segment.type == "tangent":
-            segment_tooltip = f"{segment.name} ({segment.start_station} to {segment.end_station})"
-        elif segment.type == "spiral_curve_spiral":
-            curve_info = f"{segment.degree_value:.2f}° curve, {segment.direction} turn"
-            radius_info = f"R={int(segment.radius_ft)}'"
-            spiral_info = f"{int(segment.entry_spiral_length)}' spirals"
-            segment_tooltip = f"{segment.name} ({segment.ts_station} to {segment.st_station})\n{curve_info}, {radius_info}, {spiral_info}"
-        
-        # Add AntPath for this segment
-        if segment.type == "tangent":
-            # For tangent segments, use regular dash pattern
-            dash_array = [10, 20]
-            delay = 800
-        else:
-            # For curve segments, use shorter dash pattern for more animated feel
-            dash_array = [5, 15]
-            delay = 600
-            
+        # Add animated path
         AntPath(
-            locations=yellow_alignment.segment_coords[i],
-            dash_array=dash_array,
-            delay=delay,
+            locations=blue_alignment.all_coords,
+            dash_array=[10, 20],
+            delay=800,
+            color='blue',
+            pulseColor='white',
+            paused=False,
+            weight=5,
+            opacity=0.9,
+            tooltip="Blue Route: Under Crest Canyon",
+            className="blue-route-overlay"  # Special class to allow hover
+        ).add_to(m)
+    
+    # Find SC point of the third curve for Racetrack View Dr Portal marker
+    racetrack_portal_point = None
+    segment_index_limit = None
+    
+    # First find which segment is the Third Curve and collect all coordinates up to that point
+    for i, segment in enumerate(yellow_alignment.segments):
+        if segment.type == "spiral_curve_spiral" and segment.name == "Third Curve":
+            racetrack_portal_point = segment.sc_point
+            segment_index_limit = i
+            break
+    
+    # Collect coordinates for "Yellow Track: Bridge" segment
+    bridge_segment_coords = []
+    
+    # If we found the Third Curve, collect all coordinates up to its SC point
+    if segment_index_limit is not None:
+        # Add all coordinates from previous segments
+        for i in range(segment_index_limit):
+            bridge_segment_coords.extend(yellow_alignment.segment_coords[i])
+        
+        # Get the SC point directly from the third curve - this is the Racetrack View Portal location
+        third_curve = yellow_alignment.segments[segment_index_limit]
+        sc_point = third_curve.sc_point
+        
+        # Debug print to verify coordinates
+        print(f"SC Point coordinates: {sc_point}")
+        
+        # For the third curve, we'll add ALL points from TS to a point BEYOND the SC point
+        # and then trim it back to ensure we don't end short
+        
+        # Get the first half of the third curve with extra points
+        third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
+        
+        # Take the first 40% of points to ensure we go beyond the SC point
+        # (the entry spiral is typically about 30% of the total curve)
+        points_to_include = int(len(third_curve_coords) * 0.4)
+        bridge_segment_coords.extend(third_curve_coords[:points_to_include])
+        
+        # Now determine which point in our collected coordinates is closest to the SC point
+        closest_idx = -1
+        min_distance = float('inf')
+        
+        # Start from the halfway point of our bridge segment to speed up the search
+        start_idx = len(bridge_segment_coords) // 2
+        for i in range(start_idx, len(bridge_segment_coords)):
+            point = bridge_segment_coords[i]
+            dx = point[0] - sc_point[0]
+            dy = point[1] - sc_point[1]
+            distance = dx*dx + dy*dy
+            
+            if distance < min_distance:
+                min_distance = distance
+                closest_idx = i
+        
+        # Trim the bridge coordinates to end at the closest point to SC
+        if closest_idx > 0:
+            bridge_segment_coords = bridge_segment_coords[:closest_idx+1]
+        
+        # Always make sure the exact SC point is the last point
+        if not (bridge_segment_coords[-1][0] == sc_point[0] and bridge_segment_coords[-1][1] == sc_point[1]):
+            bridge_segment_coords.append(sc_point)
+            
+        # Debug print to verify the endpoint
+        print(f"Bridge segment endpoint: {bridge_segment_coords[-1]}")
+        print(f"Bridge segment length: {len(bridge_segment_coords)} points")
+    
+    # Create a "Yellow Track: Bridge" overlay for the entire segment
+    
+    if bridge_segment_coords:
+        # Add a solid, thick line first to completely cover the original
+        yellow_bridge_line = folium.PolyLine(
+            locations=bridge_segment_coords,
+            color='#FFD700',
+            weight=9,  # Extra thick to ensure complete coverage
+            opacity=1.0,
+            tooltip="Yellow Track: Bridge",
+            className="yellow-bridge-overlay"  # Special class to allow hover
+        ).add_to(m)
+        
+        # Add animated path on top with the same special class
+        AntPath(
+            locations=bridge_segment_coords,
+            dash_array=[10, 20],
+            delay=800,
             color='#FFD700',
             pulseColor='#FFFFFF',
             paused=False,
-            weight=4,
-            opacity=0.9,
-            tooltip=segment_tooltip
+            weight=5,  # Slightly thicker to ensure it's on top
+            opacity=0.95,
+            tooltip="Yellow Track: Bridge",
+            className="yellow-bridge-overlay"  # Special class to allow hover
+        ).add_to(m)
+    
+    # Add animated paths for the rest of the alignment (after the bridge section)
+    if segment_index_limit is not None:
+        # Add the rest of the third curve (after SC point)
+        third_curve = yellow_alignment.segments[segment_index_limit]
+        third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
+        
+        entry_spiral_length = third_curve.entry_spiral_length
+        circular_arc_length = third_curve.circular_arc_length
+        exit_spiral_length = third_curve.exit_spiral_length
+        total_curve_length = entry_spiral_length + circular_arc_length + exit_spiral_length
+        
+        # Calculate approximately how many points to include for each portion
+        if len(third_curve_coords) > 0:
+            points_per_unit = len(third_curve_coords) / total_curve_length
+            entry_spiral_points = int(entry_spiral_length * points_per_unit)
+            circular_arc_points = int(circular_arc_length * points_per_unit)
+            
+            # Extract the circular curve coordinates (for Cut and Cover tunnel)
+            circular_curve_start = entry_spiral_points
+            circular_curve_end = entry_spiral_points + circular_arc_points
+            circular_curve_coords = third_curve_coords[circular_curve_start:circular_curve_end]
+            
+            # Extract the exit spiral coordinates
+            exit_spiral_coords = third_curve_coords[circular_curve_end:]
+            
+            # Add the remaining portion of the entry spiral (after the portal)
+            entry_spiral_after_portal = third_curve_coords[entry_spiral_points//2:entry_spiral_points]
+            if entry_spiral_after_portal:
+                AntPath(
+                    locations=entry_spiral_after_portal,
+                    dash_array=[10, 20],
+                    delay=600,
+                    color='#FFD700',
+                    pulseColor='#FFFFFF',
+                    paused=False,
+                    weight=5,
+                    opacity=0.9,
+                    tooltip=f"{third_curve.name} - Entry Spiral"
+                ).add_to(m)
+            
+            # Add the circular curve with Cut and Cover tunnel label but same appearance
+            if circular_curve_coords:
+                yellow_cut_and_cover_line_1 = folium.PolyLine(
+                    locations=circular_curve_coords,
+                    color='#FFD700',
+                    weight=9,  # Extra thick to ensure complete coverage
+                    opacity=1.0,
+                    tooltip="Yellow Track: Cut and Cover Tunnel",
+                    className="yellow-cut-and-cover-overlay"  # Special class to allow hover
+                ).add_to(m)
+                
+                AntPath(
+                    locations=circular_curve_coords,
+                    dash_array=[10, 20],
+                    delay=600,
+                    color='#FFD700',
+                    pulseColor='#FFFFFF',
+                    paused=False,
+                    weight=5,
+                    opacity=0.9,
+                    tooltip="Yellow Track: Cut and Cover Tunnel",
+                    className="yellow-cut-and-cover-overlay"
+                ).add_to(m)
+            
+            # Add the exit spiral
+            if exit_spiral_coords:
+                yellow_bored_tunnel_line = folium.PolyLine(
+                    locations=exit_spiral_coords,
+                    color='#FFD700',
+                    weight=9,  # Extra thick to ensure complete coverage
+                    opacity=1.0,
+                    tooltip="Yellow Track: Bored Tunnel",
+                ).add_to(m)
+
+                AntPath(
+                    locations=exit_spiral_coords,
+                    dash_array=[10, 20],
+                    delay=600,
+                    color='#FFD700',
+                    pulseColor='#FFFFFF',
+                    paused=False,
+                    weight=5,
+                    opacity=0.9,
+                    tooltip="Yellow Track: Bored Tunnel"
+                ).add_to(m)
+        
+        
+        # Combine all remaining segments after the cut and cover tunnel into one "Bored Tunnel" segment
+        if segment_index_limit is not None:
+            # Collect all coordinates from remaining segments
+            bored_tunnel_coords = []
+            
+            # First add the exit spiral of the third curve if not already added
+            if segment_index_limit < len(yellow_alignment.segments) and not exit_spiral_coords:
+                third_curve = yellow_alignment.segments[segment_index_limit]
+                third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
+                
+                # Calculate segment boundaries
+                points_per_unit = len(third_curve_coords) / total_curve_length
+                entry_spiral_points = int(entry_spiral_length * points_per_unit)
+                circular_arc_points = int(circular_arc_length * points_per_unit)
+                exit_spiral_start = entry_spiral_points + circular_arc_points
+                
+                # Add exit spiral points
+                bored_tunnel_coords.extend(third_curve_coords[exit_spiral_start:])
+        
+            # Add a flag to track if we've already processed the 7th tangent
+            processed_seventh_tangent = False
+        
+        # Then add all remaining segments
+        for i in range(segment_index_limit + 1, len(yellow_alignment.segments)):
+            segment = yellow_alignment.segments[i]
+            segment_coords = yellow_alignment.segment_coords[i]
+            
+            # Special handling for the 7th tangent - split it into two halves
+            if segment.type == "tangent" and segment.name == "Seventh Tangent":
+                # Set the flag to indicate we've processed the 7th tangent
+                processed_seventh_tangent = True
+                
+                # Find the next segment (7th curve)
+                i5_knoll_portal_point = None
+                for j, next_segment in enumerate(yellow_alignment.segments):
+                    if next_segment.type == "spiral_curve_spiral" and next_segment.name == "Seventh Curve":
+                        # Get the TS point of the 7th curve as the I-5 Knoll Portal location
+                        i5_knoll_portal_point = next_segment.ts_point
+                        break
+                
+                # Calculate the midpoint
+                midpoint_index = len(segment_coords) // 2
+                
+                # First half of 7th tangent - add to bored tunnel
+                first_half_coords = segment_coords[:midpoint_index]
+                bored_tunnel_coords.extend(first_half_coords)
+                
+                # Second half of 7th tangent - add as separate "Cut and Cover Tunnel" segment
+                # Only goes to the end of the tangent (beginning of 7th curve)
+                second_half_coords = segment_coords[midpoint_index:]
+                
+                # Add the second half as a Cut and Cover Tunnel segment
+                yellow_cut_and_cover_line_2 = folium.PolyLine(
+                    locations=second_half_coords,
+                    color='#FFD700',
+                    weight=9,  # Extra thick to ensure complete coverage
+                    opacity=1.0,
+                    tooltip="Yellow Track: Cut and Cover Tunnel",
+                    className="yellow-cut-and-cover-overlay"  # Special class to allow hover
+                ).add_to(m)
+                
+                AntPath(
+                    locations=second_half_coords,
+                    dash_array=[10, 20],
+                    delay=600,
+                    color='#FFD700',
+                    pulseColor='#FFFFFF',
+                    paused=False,
+                    weight=5,
+                    opacity=0.9,
+                    tooltip="Yellow Track: Cut and Cover Tunnel"
+                ).add_to(m)
+                
+                # Add the I-5 Knoll Portal marker at the end of the cut and cover segment
+                if i5_knoll_portal_point:
+                    # Define custom icon for the I-5 Knoll Portal
+                    knoll_portal_icon = folium.DivIcon(
+                        icon_size=(30, 30),
+                        icon_anchor=(15, 15),
+                        html="""
+                        <div style="
+                            background-color: #B8860B;
+                            width: 24px;
+                            height: 24px;
+                            border-radius: 12px;
+                            border: 3px solid white;
+                            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                            font-size: 16px;
+                        ">T</div>
+                        """
+                    )
+                    
+                    folium.Marker(
+                        location=i5_knoll_portal_point,
+                        tooltip="I-5 Knoll Portal",
+                        popup="<b>I-5 Knoll Portal</b>",
+                        icon=knoll_portal_icon
+                    ).add_to(m)
+                
+                # Since we've reached the 2nd cut and cover segment, stop adding segments to the bored tunnel
+                # Add the bored tunnel segment now
+                if bored_tunnel_coords:
+                    yellow_bored_tunnel_line_2 = folium.PolyLine(
+                        locations=bored_tunnel_coords,
+                        color='#FFD700',
+                        weight=9,  # Extra thick to ensure complete coverage
+                        opacity=1.0,
+                        tooltip="Yellow Track: Bored Tunnel",
+                    ).add_to(m)
+        
+                    AntPath(
+                        locations=bored_tunnel_coords,
+                        dash_array=[10, 20],
+                        delay=600,
+                        color='#FFD700',
+                        pulseColor='#FFFFFF',
+                        paused=False,
+                        weight=5,
+                        opacity=0.9,
+                        tooltip="Yellow Track: Bored Tunnel"
+                    ).add_to(m)
+                
+                # Clear the bored tunnel coordinates as we don't want to add any more segments to it
+                bored_tunnel_coords = []
+            elif not processed_seventh_tangent:
+                # For segments before the 7th tangent, add to bored tunnel
+                bored_tunnel_coords.extend(segment_coords)
+            elif segment.type == "spiral_curve_spiral" and segment.name == "Seventh Curve":
+                # Handle the seventh curve separately (not part of cut and cover)
+                
+                # Split the curve into two halves
+                midpoint_index = len(segment_coords) // 2
+                first_half_coords = segment_coords[:midpoint_index]
+                second_half_coords = segment_coords[midpoint_index:]
+                
+                # Add the first half as "U-Section"
+                yellow_u_section_line = folium.PolyLine(
+                    locations=first_half_coords,
+                    color='#FFD700',
+                    weight=9,  # Extra thick to ensure complete coverage
+                    opacity=1.0,
+                    tooltip="Yellow Track: U-Section",
+                ).add_to(m)
+                
+                AntPath(
+                    locations=first_half_coords,
+                    dash_array=[10, 20],
+                    delay=600,
+                    color='#FFD700',
+                    pulseColor='#FFFFFF',
+                    paused=False,
+                    weight=5,
+                    opacity=0.9,
+                    tooltip="Yellow Track: U-Section"
+                ).add_to(m)
+                
+                # Add the second half as "Bored Tunnel"
+                yellow_bored_tunnel_line_curve7 = folium.PolyLine(
+                    locations=second_half_coords,
+                    color='#FFD700',
+                    weight=9,  # Extra thick to ensure complete coverage
+                    opacity=1.0,
+                    tooltip="Yellow Track",
+                ).add_to(m)
+                
+                AntPath(
+                    locations=second_half_coords,
+                    dash_array=[10, 20],
+                    delay=600,
+                    color='#FFD700',
+                    pulseColor='#FFFFFF',
+                    paused=False,
+                    weight=5,
+                    opacity=0.9,
+                    tooltip="Yellow Track"
+                ).add_to(m)
+            else:
+                # For segments after the 7th curve, add them with the appropriate styling
+                is_after_seventh_curve = False
+                
+                # Check if we're past the 7th curve
+                for j, check_segment in enumerate(yellow_alignment.segments):
+                    if check_segment.type == "spiral_curve_spiral" and check_segment.name == "Seventh Curve":
+                        is_after_seventh_curve = i > j
+                        break
+                
+                # All segments after the 7th curve should be plain "Yellow Track" segments
+                if is_after_seventh_curve:
+                    # For segments after the U-Section (second half of 7th curve), add as basic track
+                    yellow_segment_line = folium.PolyLine(
+                        locations=segment_coords,
+                        color='#FFD700',
+                        weight=9,  # Extra thick to ensure complete coverage
+                        opacity=1.0,
+                        tooltip="Yellow Track",
+                    ).add_to(m)
+                    
+                    AntPath(
+                        locations=segment_coords,
+                        dash_array=[10, 20],
+                        delay=600,
+                        color='#FFD700',
+                        pulseColor='#FFFFFF',
+                        paused=False,
+                        weight=5,
+                        opacity=0.9,
+                        tooltip="Yellow Track"
+                    ).add_to(m)
+                else:
+                    # For segments between the 1st and 2nd cut and cover tunnels, maintain as cut and cover
+                    yellow_segment_line = folium.PolyLine(
+                        locations=segment_coords,
+                        color='#FFD700',
+                        weight=9,  # Extra thick to ensure complete coverage
+                        opacity=1.0,
+                        tooltip="Yellow Track: Cut and Cover Tunnel",
+                    ).add_to(m)
+                    
+                    AntPath(
+                        locations=segment_coords,
+                        dash_array=[10, 20],
+                        delay=600,
+                        color='#FFD700',
+                        pulseColor='#FFFFFF',
+                        paused=False,
+                        weight=5,
+                        opacity=0.9,
+                        tooltip="Yellow Track: Cut and Cover Tunnel"
+                    ).add_to(m)
+        
+        # We've already rendered the bored tunnel segment earlier when we reached the 2nd cut and cover tunnel
+        # So we don't need to render it again here
+        #if bored_tunnel_coords:
+        #    yellow_bored_tunnel_line_2 = folium.PolyLine(
+        #        locations=bored_tunnel_coords,
+        #        color='#FFD700',
+        #        weight=9,  # Extra thick to ensure complete coverage
+        #        opacity=1.0,
+        #        tooltip="Yellow Track: Bored Tunnel",
+        #    ).add_to(m)
+        #
+        #    AntPath(
+        #        locations=bored_tunnel_coords,
+        #        dash_array=[10, 20],
+        #        delay=600,
+        #        color='#FFD700',
+        #        pulseColor='#FFFFFF',
+        #        paused=False,
+        #        weight=5,
+        #        opacity=0.9,
+        #        tooltip="Yellow Track: Bored Tunnel"
+        #    ).add_to(m)
+    
+    # Add the Racetrack View Dr Portal marker
+    if racetrack_portal_point:
+        # Define custom icon with shadow, larger size, and more prominent appearance
+        tunnel_icon = folium.DivIcon(
+            icon_size=(30, 30),
+            icon_anchor=(15, 15),
+            html="""
+            <div style="
+                background-color: red;
+                width: 24px;
+                height: 24px;
+                border-radius: 12px;
+                border: 3px solid white;
+                box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 16px;
+            ">T</div>
+            """
+        )
+        
+        folium.Marker(
+            location=racetrack_portal_point,
+            tooltip="Racetrack View Dr Portal",
+            popup="<b>Racetrack View Dr Portal</b>",
+            icon=tunnel_icon
         ).add_to(m)
     
     # Print out bearings at key points for debugging
@@ -535,7 +1110,7 @@ with main_content:
             # draw a connector
             folium.PolyLine(
                 [addr_pt, (nearest_lat, nearest_lon)],
-                color="blue" if "Blue" in name else "magenta" if "Purple" in name else "green" if "Green" in name else "#FF7700",
+                color="magenta" if "Purple" in name else "green" if "Green" in name else "#FF7700",
                 weight=2,
                 dash_array="5,5"
             ).add_to(m)

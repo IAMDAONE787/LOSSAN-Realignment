@@ -220,7 +220,9 @@ class RailwayAlignment:
             radius_ft=radius_ft,
             direction=direction,
             name=name or f"Curve {len(self.segments)+1}",
-            color=self.color
+            color=self.color,
+            add_markers=False,
+            add_white_pattern=False
         )
         self.add_segment(segment)
         return segment
@@ -242,7 +244,7 @@ class RailwayAlignment:
         
         return track_params
         
-    def add_to_map(self, m, start_ref_point_name=None, track_params=None, start_station=None):
+    def add_to_map(self, m, start_ref_point_name=None, track_params=None, start_station=None, add_markers=False):
         """Add the entire alignment to the map"""
         if not self.segments:
             raise ValueError("No segments added to alignment")
@@ -290,12 +292,13 @@ class RailwayAlignment:
             self.segment_coords.append(segment.coords)
             self.all_coords.extend(segment.coords)
             
-        # Add markers for reference points
-        for name, ref_point in self.reference_points.items():
-            folium.Marker(
-                ref_point["coords"],
-                tooltip=f"Reference: {name} (STA {ref_point['station']})",
-                icon=folium.Icon(color="black", icon="map-pin", prefix="fa")
-            ).add_to(m)
+        # Add markers for reference points if requested
+        if add_markers:
+            for name, ref_point in self.reference_points.items():
+                folium.Marker(
+                    ref_point["coords"],
+                    tooltip=f"Reference: {name} (STA {ref_point['station']})",
+                    icon=folium.Icon(color="black", icon="map-pin", prefix="fa")
+                ).add_to(m)
             
         return self.all_coords 
