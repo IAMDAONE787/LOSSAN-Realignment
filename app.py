@@ -95,19 +95,6 @@ main_content = st.container()
 with main_content:
     # --- 1. define your four alignments (lat, lon) lists here ---
     ALIGNMENTS = {
-        "Purple Route: Under Camino Del Mar": {
-            "coords": [
-                (32.9720408, -117.2664554),
-                (32.9676162, -117.2653677),
-                (32.9649757, -117.2655738),
-                (32.9579593, -117.2649714),
-                (32.9480552, -117.2612477),
-                (32.9400607, -117.2610541),
-                (32.9351700+0.00005, -117.2587578+0.00005),
-                (32.9162438+0.00005, -117.2371537+0.00005),
-            ],
-            "color": "magenta",
-        },
         "Green Route: Del Mar Bluffs Double-Track": {
             "coords": [
                 (32.9720408, -117.2664554),
@@ -542,6 +529,112 @@ with main_content:
     blue_seventh_tangent = blue_alignment.add_tangent("266+25.11", "274+32.35", name="Seventh Tangent")
     blue_seventh_tangent.manual_bearing = 135
 
+    # === PURPLE TRACK ENGINEERING MODEL ===
+    # Create the purple track using the engineering specifications and directly add to map
+
+    # Create a new Railway Alignment for the Purple route
+    purple_alignment = RailwayAlignment(name="Purple Route: Under Camino Del Mar", color="magenta")
+
+    # Add reference points for the purple track
+    purple_sta_500_coords = (32.9731225, -117.2667758)  # 5+00 station
+    purple_sta_1000_coords = (32.9717752, -117.2664515)  # 10+00 station
+
+    purple_alignment.add_reference_point("STA_500", purple_sta_500_coords, 500)
+    purple_alignment.add_reference_point("STA_1000", purple_sta_1000_coords, 1000)
+
+    # Calculate track parameters based on reference points
+    purple_track_params = purple_alignment.calculate_track_params("STA_500", "STA_1000")
+
+    # Define segments for the Purple route - initial tangent
+    purple_first_tangent = purple_alignment.add_tangent("5+00", "33+23.02", name="Initial Tangent")
+
+    # Add first curve (gentle curve to follow Camino Del Mar)
+    purple_first_curve = purple_alignment.add_curve(
+        ts_station="33+23.02",
+        sc_station="35+73.02",
+        cs_station="46+03.60",
+        st_station="48+53.60", #48+53.60
+        degree_of_curve="1 25'00\"", #1 00'00\"
+        direction="left",
+        name="First Curve"
+    )
+
+    # Add second tangent
+    purple_second_tangent = purple_alignment.add_tangent("48+53.60", "51+91.55", name="Second Tangent")
+    purple_second_tangent.manual_bearing = 181.75  # Southeast direction
+
+    # Add second curve (sharper turn toward southeast)
+    purple_second_curve = purple_alignment.add_curve(
+        ts_station="51+91.55",
+        sc_station="54+41.55",
+        cs_station="71+12.55",
+        st_station="73+62.55",
+        degree_of_curve="1 00'00\"",
+        direction="right",
+        name="Second Curve"
+    )
+
+    # Add third tangent going southeast
+    purple_third_tangent = purple_alignment.add_tangent("73+62.55", "91+37.23", name="Third Tangent")
+
+    # Add the curve near Del Mar Heights Road
+    purple_third_curve = purple_alignment.add_curve(
+        ts_station="91+37.23",
+        sc_station="94+37.23",
+        cs_station="108+41.79",
+        st_station="111+41.79",
+        degree_of_curve="1 06'00\"",
+        direction="left",
+        name="Third Curve"
+    )
+
+    # Add fourth tangent 
+    purple_fourth_tangent = purple_alignment.add_tangent("111+41.79", "114+31.56", name="Fourth Tangent")
+    #purple_fourth_tangent.manual_bearing = 150  # More southerly direction
+
+    # Add fourth curve to align with endpoint
+    purple_fourth_curve = purple_alignment.add_curve(
+        ts_station="114+31.56",
+        sc_station="117+01.56",
+        cs_station="152+41.45",
+        st_station="155+11.45",
+        degree_of_curve="1 03'30\"",
+        direction="right",
+        name="Fourth Curve"
+    )
+
+    # Add fifth tangent to reach the end point
+    purple_fifth_tangent = purple_alignment.add_tangent("155+11.45", "183+01.22", name="Fifth Tangent")
+
+    # Add fifth curve
+    purple_fifth_curve = purple_alignment.add_curve(
+        ts_station="183+01.22",
+        sc_station="188+81.22",
+        cs_station="197+17.88",
+        st_station="202+97.88",
+        degree_of_curve="0 30'00\"",
+        direction="right",
+        name="Fifth Curve"
+    )
+
+    # Add sixth tangent
+    purple_sixth_tangent = purple_alignment.add_tangent("202+97.88", "226+46.37", name="Sixth Tangent")
+    purple_sixth_tangent.manual_bearing = 133  # More southerly direction
+
+    # Add sixth curve
+    purple_sixth_curve = purple_alignment.add_curve(
+        ts_station="226+46.37",
+        sc_station="233+26.37",
+        cs_station="237.58+89",
+        st_station="244+38.89",
+        degree_of_curve="0 49'35\"",
+        direction="left",
+        name="Sixth Curve"
+    )
+
+    purple_seventh_tangent = purple_alignment.add_tangent("244+38.89", "280+89.19", name="Seventh Tangent")
+    #purple_seventh_tangent.manual_bearing = 160  # More southerly direction
+
     # Add CSS to disable hover/tooltips on original polylines
     css = """
     <style>
@@ -570,6 +663,14 @@ with main_content:
         add_markers=False  # Hide all pin points
     )
     
+    # Add the purple alignment to the map
+    purple_alignment.add_to_map(
+        m=m,
+        start_ref_point_name="STA_500",
+        track_params=purple_track_params,
+        add_markers=False  # Hide all pin points
+    )
+    
     # Add an animated blue path overlay
     if blue_alignment.all_coords:
         # Add a solid base line
@@ -593,6 +694,31 @@ with main_content:
             opacity=0.9,
             tooltip="Blue Route: Under Crest Canyon",
             className="blue-route-overlay"  # Special class to allow hover
+        ).add_to(m)
+    
+    # Add an animated purple path overlay
+    if purple_alignment.all_coords:
+        # Add a solid base line
+        folium.PolyLine(
+            locations=purple_alignment.all_coords,
+            color='magenta',
+            weight=7,
+            opacity=0.7,
+            tooltip="Purple Route: Under Camino Del Mar"
+        ).add_to(m)
+        
+        # Add animated path
+        AntPath(
+            locations=purple_alignment.all_coords,
+            dash_array=[10, 20],
+            delay=800,
+            color='magenta',
+            pulseColor='white',
+            paused=False,
+            weight=5,
+            opacity=0.9,
+            tooltip="Purple Route: Under Camino Del Mar",
+            className="purple-route-overlay"  # Special class to allow hover
         ).add_to(m)
     
     # Find SC point of the third curve for Racetrack View Dr Portal marker
