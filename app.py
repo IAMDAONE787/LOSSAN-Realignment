@@ -2,7 +2,6 @@
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 import numpy as np
 from folium.plugins import AntPath
@@ -19,6 +18,7 @@ from utils.circular_curve import create_railway_circular_curve, add_railway_circ
 from utils.tangent_line import add_railway_tangent_to_map
 from utils.railway_curve import add_complete_railway_curve_to_map, add_complete_railway_alignment_to_map
 from utils.railway_alignment import RailwayAlignment, TangentSegment, CurveSegment
+from opencage.geocoder import OpenCageGeocode
 
 def format_station(station_value):
     """Format a station value as XX+XX.XX"""
@@ -120,14 +120,39 @@ with main_content:
         st.session_state["location"] = None
 
     if search and address:
-        geolocator = Nominatim(user_agent="lossan_app")
-        location = geolocator.geocode(address)
-        if location is None:
-            st.sidebar.error("Address not found")
+        # Initialize OpenCage geocoder with API key
+        opencage_api_key = "e4a3fe37fe3d469499dc77e798f65245"  # Replace with your OpenCage API key
+        geocoder = OpenCageGeocode(opencage_api_key)
+        
+        try:
+            # Perform geocoding
+            results = geocoder.geocode(address)
+            
+            if results and len(results):
+                # Extract location data from the first result
+                location_data = results[0]
+                
+                # Create a location object with the required attributes
+                class LocationResult:
+                    def __init__(self, lat, lng, formatted):
+                        self.latitude = lat
+                        self.longitude = lng
+                        self.address = formatted
+                
+                location = LocationResult(
+                    location_data['geometry']['lat'],
+                    location_data['geometry']['lng'],
+                    location_data['formatted']
+                )
+                
+                st.session_state["address"] = address
+                st.session_state["location"] = location
+            else:
+                st.sidebar.error("Address not found")
+                st.session_state["location"] = None
+        except Exception as e:
+            st.sidebar.error(f"Geocoding service error: {str(e)}")
             st.session_state["location"] = None
-        else:
-            st.session_state["address"] = address
-            st.session_state["location"] = location
 
     # Use session state location for display
     location = st.session_state.get("location", None)
@@ -1274,6 +1299,60 @@ with main_content:
         
         # Display the distance to Yellow track
         st.sidebar.write("**Yellow Route: Engineering Alignment:**")
+        st.sidebar.write(f"- {dist_ft} ft")
+        st.sidebar.write(f"- {dist_m_rounded} m")
+        st.sidebar.write(f"- {dist_km} km")
+        st.sidebar.write(f"- {dist_miles} mi")
+        
+        # Calculate distance to blue track
+        blue_line = LineString([(lon, lat) for lat, lon in blue_alignment.all_coords])
+        nearest = blue_line.interpolate(blue_line.project(pt))
+        nearest_lat, nearest_lon = nearest.y, nearest.x
+        dist_m = geodesic(addr_pt, (nearest_lat, nearest_lon)).meters
+        
+        # Convert to different units and round
+        dist_ft = round(dist_m * 3.28084)  # Convert meters to feet
+        dist_m_rounded = round(dist_m / 10) * 10  # Round to nearest 10 meters
+        dist_km = round(dist_m / 1000, 1)  # Round to 0.1 km
+        dist_miles = round(dist_m * 0.000621371, 1)  # Round to 0.1 miles
+        
+        # Draw a connector
+        folium.PolyLine(
+            [addr_pt, (nearest_lat, nearest_lon)],
+            color="blue",
+            weight=2,
+            dash_array="5,5"
+        ).add_to(m)
+        
+        # Display the distance to Blue track
+        st.sidebar.write("**Blue Route: Under Crest Canyon:**")
+        st.sidebar.write(f"- {dist_ft} ft")
+        st.sidebar.write(f"- {dist_m_rounded} m")
+        st.sidebar.write(f"- {dist_km} km")
+        st.sidebar.write(f"- {dist_miles} mi")
+        
+        # Calculate distance to purple track
+        purple_line = LineString([(lon, lat) for lat, lon in purple_alignment.all_coords])
+        nearest = purple_line.interpolate(purple_line.project(pt))
+        nearest_lat, nearest_lon = nearest.y, nearest.x
+        dist_m = geodesic(addr_pt, (nearest_lat, nearest_lon)).meters
+        
+        # Convert to different units and round
+        dist_ft = round(dist_m * 3.28084)  # Convert meters to feet
+        dist_m_rounded = round(dist_m / 10) * 10  # Round to nearest 10 meters
+        dist_km = round(dist_m / 1000, 1)  # Round to 0.1 km
+        dist_miles = round(dist_m * 0.000621371, 1)  # Round to 0.1 miles
+        
+        # Draw a connector
+        folium.PolyLine(
+            [addr_pt, (nearest_lat, nearest_lon)],
+            color="magenta",
+            weight=2,
+            dash_array="5,5"
+        ).add_to(m)
+        
+        # Display the distance to Purple track
+        st.sidebar.write("**Purple Route: Under Camino Del Mar:**")
         st.sidebar.write(f"- {dist_ft} ft")
         st.sidebar.write(f"- {dist_m_rounded} m")
         st.sidebar.write(f"- {dist_km} km")
