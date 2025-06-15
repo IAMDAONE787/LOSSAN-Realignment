@@ -112,21 +112,29 @@ with main_content:
     }
 
     # --- 2. address input & geocoding ---
-    address = st.sidebar.text_input("Search address", value=st.session_state.get("address", ""))
+    st.sidebar.subheader("Search Location")
+    
+    # Simple text input for address without autocomplete
+    address_input = st.sidebar.text_input("Enter address", value=st.session_state.get("address", ""))
+    
+    # Search button
     search = st.sidebar.button("Search")
 
     # Initialize session state for location if not present
     if "location" not in st.session_state:
         st.session_state["location"] = None
 
-    if search and address:
+    if search and address_input:
         # Initialize OpenCage geocoder with API key
         opencage_api_key = "e4a3fe37fe3d469499dc77e798f65245"  # Replace with your OpenCage API key
         geocoder = OpenCageGeocode(opencage_api_key)
         
         try:
-            # Perform geocoding
-            results = geocoder.geocode(address)
+            # Define bounds for San Diego area
+            socal_bounds = "-117.4,32.5,-116.8,33.3"  # San Diego County area
+            
+            # Perform geocoding with bounds constraint
+            results = geocoder.geocode(address_input, bounds=socal_bounds)
             
             if results and len(results):
                 # Extract location data from the first result
@@ -145,7 +153,7 @@ with main_content:
                     location_data['formatted']
                 )
                 
-                st.session_state["address"] = address
+                st.session_state["address"] = address_input
                 st.session_state["location"] = location
             else:
                 st.sidebar.error("Address not found")
