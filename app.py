@@ -94,22 +94,8 @@ main_content = st.container()
 
 with main_content:
     # --- 1. define your four alignments (lat, lon) lists here ---
-    ALIGNMENTS = {
-        "Green Route: Del Mar Bluffs Double-Track": {
-            "coords": [
-                (32.9720408, -117.2664554),
-                (32.9676162, -117.2653677),
-                (32.9649757, -117.2655738),
-                (32.9608866, -117.2681671),
-                (32.9556471, -117.2670344),
-                (32.9457051, -117.2631553),
-                (32.9387049, -117.2612257),
-                (32.9351700, -117.2587578),
-                (32.9162438, -117.2371537),
-            ],
-            "color": "green",
-        },
-    }
+    # Green track will now be an engineering track, so we'll remove it from ALIGNMENTS
+    ALIGNMENTS = {}
 
     # --- 2. address input & geocoding ---
     st.sidebar.subheader("Search Location")
@@ -668,6 +654,147 @@ with main_content:
     purple_seventh_tangent = purple_alignment.add_tangent("244+38.89", "280+89.19", name="Seventh Tangent")
     #purple_seventh_tangent.manual_bearing = 160  # More southerly direction
 
+    # === GREEN TRACK ENGINEERING MODEL ===
+    # Create the green track using the engineering specifications based on the purple track
+    
+    # Create a new Railway Alignment for the Green route
+    green_alignment = RailwayAlignment(name="Green Route: Del Mar Bluffs Double-Track", color="green")
+    
+    # Add reference points for the green track
+    green_sta_500_coords = (32.9731225, -117.2667758)  # 5+00 station
+    #green_sta_1000_coords = (32.9716252, -117.2664515)  # 10+00 station (mannually edited)
+    green_sta_1000_coords = (32.9717752, -117.2664515)  # 10+00 station
+    
+    green_alignment.add_reference_point("STA_500", green_sta_500_coords, 500)
+    green_alignment.add_reference_point("STA_1000", green_sta_1000_coords, 1000)
+    
+    # Calculate track parameters directly using the engineering_coords function
+    # This ensures precise alignment between reference points
+    green_track_params = calculate_track_parameters(
+        point1=green_sta_500_coords,
+        station1=500,
+        point2=green_sta_1000_coords,
+        station2=1000
+    )
+    
+    # Define segments for the Green route - initial tangent
+    # First tangent from STA_500 to STA_1000 (exactly between reference points)
+    green_first_tangent = green_alignment.add_tangent("5+00", "10+00", name="Initial Reference Tangent")
+    
+    # Continue with the rest of the alignment
+    green_pre_tangent = green_alignment.add_tangent("10+00", "12+05.15", name="Pre-Curve Tangent")
+    
+    green_pre_curve = green_alignment.add_curve(
+        ts_station="12+05.15",
+        sc_station="14+15.15",
+        cs_station="17+79.87",
+        st_station="19+89.87",
+        degree_of_curve="0 40'00\"",
+        direction="left",
+        name="First Curve"
+    )
+    
+    # Add first curve (gentle curve to follow bluffs)
+    green_first_curve = green_alignment.add_curve(
+        ts_station="19+89.87",
+        sc_station="35+22.79",
+        cs_station="36+28.04",
+        st_station="37+28.04",
+        degree_of_curve="2 55'00\"", #2 09'01
+        direction="left",
+        name="First Curve"
+    )
+    
+    # Add second tangent
+    green_second_tangent = green_alignment.add_tangent("37+28.04", "53+08.78", name="Second Tangent")
+    #green_second_tangent.manual_bearing = 178.5
+    
+    # Add second curve
+    green_second_curve = green_alignment.add_curve(
+        ts_station="53+08.78",
+        sc_station="55+58.78",
+        cs_station="60+27.97",
+        st_station="62+77.96",
+        degree_of_curve="4 09'00\"",
+        direction="right",
+        name="Second Curve"
+    )
+    
+    # Add third tangent
+    green_third_tangent = green_alignment.add_tangent("62+77.96", "71+41.19", name="Third Tangent")
+    
+    # Add third curve
+    green_third_curve = green_alignment.add_curve(
+        ts_station="71+41.19",
+        sc_station="73+81.19",
+        cs_station="76+68.70",
+        st_station="79+08.70",
+        degree_of_curve="1 20'00\"",
+        direction="right",
+        name="Third Curve"
+    )
+    
+    # Add fourth tangent
+    green_fourth_tangent = green_alignment.add_tangent("79+08.70", "101+45.73", name="Fourth Tangent")
+    green_fourth_tangent.manual_bearing = 161
+    
+    # Add fourth curve
+    green_fourth_curve = green_alignment.add_curve(
+        ts_station="101+45.73",
+        sc_station="105+05.73",
+        cs_station="109+96.76",
+        st_station="113+56.76",
+        degree_of_curve="0 44'35\"",
+        direction="left",
+        name="Fourth Curve"
+    )
+    
+    # Add fifth tangent
+    green_fifth_tangent = green_alignment.add_tangent("113+56.76", "129+11.51", name="Fifth Tangent")
+    
+    # Add fifth curve
+    green_fifth_curve = green_alignment.add_curve(
+        ts_station="129+11.51",
+        sc_station="131+61.51",
+        cs_station="138+79.54",
+        st_station="141+29.54",
+        degree_of_curve="2 45'00\"", #3 07'00
+        direction="right",
+        name="Fifth Curve"
+    )
+    
+    # Add sixth tangent
+    green_sixth_tangent = green_alignment.add_tangent("141+29.54", "187+10.02", name="Sixth Tangent")
+    #green_sixth_tangent.manual_bearing = 135
+    
+    # Add sixth curve
+    green_sixth_curve = green_alignment.add_curve(
+        ts_station="187+10.02",
+        sc_station="192+90.02",
+        cs_station="201+26.67",
+        st_station="207+06.67",
+        degree_of_curve="0 30'00\"",
+        direction="right",
+        name="Sixth Curve"
+    )
+    
+    # Add seventh tangent
+    green_seventh_tangent = green_alignment.add_tangent("207+06.67", "230+55.17", name="Seventh Tangent")
+    
+    # Add seventh curve
+    green_seventh_curve = green_alignment.add_curve(
+        ts_station="230+55.17",
+        sc_station="237+35.17",
+        cs_station="241+67.68",
+        st_station="248+47.68",
+        degree_of_curve="0 45'35\"",
+        direction="left",
+        name="Seventh Curve"
+    )
+
+    # Add eighth tangent
+    green_eighth_tangent = green_alignment.add_tangent("248+47.68", "284+97.94", name="Eighth Tangent")
+
     # Add CSS to disable hover/tooltips on original polylines
     css = """
     <style>
@@ -703,6 +830,39 @@ with main_content:
         track_params=purple_track_params,
         add_markers=False  # Hide all pin points
     )
+    
+    # Add the green alignment to the map
+    green_alignment.add_to_map(
+        m=m,
+        start_ref_point_name="STA_500",
+        track_params=green_track_params,
+        add_markers=False  # Hide all pin points
+    )
+    
+    # Add an animated green path overlay
+    if green_alignment.all_coords:
+        # Add a solid base line
+        folium.PolyLine(
+            locations=green_alignment.all_coords,
+            color='green',
+            weight=7,
+            opacity=0.7,
+            tooltip="Green Route: Del Mar Bluffs Double-Track"
+        ).add_to(m)
+        
+        # Add animated path
+        AntPath(
+            locations=green_alignment.all_coords,
+            dash_array=[10, 20],
+            delay=800,
+            color='green',
+            pulseColor='white',
+            paused=False,
+            weight=5,
+            opacity=0.9,
+            tooltip="Green Route: Del Mar Bluffs Double-Track",
+            className="green-route-overlay"  # Special class to allow hover
+        ).add_to(m)
     
     # Add an animated blue path overlay
     if blue_alignment.all_coords:
@@ -753,6 +913,56 @@ with main_content:
             tooltip="Purple Route: Under Camino Del Mar",
             className="purple-route-overlay"  # Special class to allow hover
         ).add_to(m)
+    
+    # Add Jimmy Durante Blvd Portal marker on the blue track at station 26+00
+    # Use the improved station_to_gis function with the alignment parameter
+    from utils.engineering_coords import station_to_gis
+    
+    # Get the blue track's reference points
+    blue_ref_point = blue_alignment.reference_points["STA_500"]["coords"]
+    blue_ref_station = blue_alignment.reference_points["STA_500"]["station"]
+    
+    # Calculate the coordinates for station 26+00 using the improved function
+    jimmy_durante_station = 2600  # 26+00
+    jimmy_durante_portal_point = station_to_gis(
+        reference_point=blue_ref_point,
+        reference_station=blue_ref_station,
+        target_station=jimmy_durante_station,
+        track_params=blue_track_params,
+        alignment=blue_alignment  # Pass the alignment object
+    )
+    
+    print(f"Jimmy Durante Portal coordinates: {jimmy_durante_portal_point}")
+    
+    # Define custom icon for the Jimmy Durante Portal
+    jimmy_durante_icon = folium.DivIcon(
+        icon_size=(30, 30),
+        icon_anchor=(15, 15),
+        html="""
+        <div style="
+            background-color: blue;
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        ">T</div>
+        """
+    )
+    
+    # Add the marker to the map
+    folium.Marker(
+        location=jimmy_durante_portal_point,
+        tooltip="Jimmy Durante Blvd Portal",
+        popup="<b>Jimmy Durante Blvd Portal</b>",
+        icon=jimmy_durante_icon
+    ).add_to(m)
     
     # Find SC point of the third curve for Racetrack View Dr Portal marker
     racetrack_portal_point = None
@@ -1450,7 +1660,8 @@ st.markdown("<div class='custom-footer'>", unsafe_allow_html=True)
 footer_cols = st.columns([3, 1])
 with footer_cols[0]:
     st.markdown("""
-    The four proposed routes and their distance calculations are based on the most recent SANDAG documentation.
+    Disclaimer:
+    The four proposed routes and their associated distance calculations presented in this interactive map are based on the most recent publicly available documentation from SANDAG: San Diego LOSSAN Rail Realignment Project Post Value Analysis Study Assessment – Appendix A: Exhibits of the Staff-Recommended Alignments (published May 16, 2025). This tool is for informational and educational purposes only and is not an official source of project data. Users should refer directly to SANDAG for authoritative and up-to-date project information. 
     """)
 with footer_cols[1]:
     st.markdown("""

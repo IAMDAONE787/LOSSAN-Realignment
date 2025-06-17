@@ -50,7 +50,7 @@ def calculate_track_parameters(point1, station1, point2, station2):
         'direction': direction
     }
 
-def station_to_gis(reference_point, reference_station, target_station, track_params):
+def station_to_gis(reference_point, reference_station, target_station, track_params, alignment=None):
     """
     Convert a station value to GIS coordinates.
     
@@ -59,10 +59,45 @@ def station_to_gis(reference_point, reference_station, target_station, track_par
         reference_station: Station value for the reference point (in feet)
         target_station: Station value to convert (in feet)
         track_params: Track parameters from calculate_track_parameters
+        alignment: Optional RailwayAlignment object to use for more accurate positioning
         
     Returns:
         Tuple (lat, lon) for the target station
     """
+    # If alignment is provided, try to use it for more accurate positioning
+    if alignment is not None and hasattr(alignment, 'all_coords') and alignment.all_coords:
+        try:
+            # Find the segment that contains the target station
+            current_station = reference_station
+            for i, segment in enumerate(alignment.segments):
+                segment_start_station = current_station
+                segment_end_station = current_station
+                
+                if segment.type == "tangent":
+                    segment_end_station = segment_start_station + segment.length_ft
+                elif segment.type == "spiral_curve_spiral":
+                    segment_end_station = segment_start_station + segment.entry_spiral_length + segment.circular_arc_length + segment.exit_spiral_length
+                
+                # Check if the target station is within this segment
+                if segment_start_station <= target_station <= segment_end_station:
+                    # Calculate the percentage along the segment
+                    segment_length = segment_end_station - segment_start_station
+                    percentage = (target_station - segment_start_station) / segment_length
+                    
+                    # Get the coordinates at that percentage along the segment
+                    segment_coords = alignment.segment_coords[i]
+                    index = int(percentage * (len(segment_coords) - 1))
+                    return segment_coords[index]
+                
+                current_station = segment_end_station
+                
+            # If we couldn't find the segment, fall back to the original method
+            print("Could not find segment containing station, falling back to vector calculation")
+        except Exception as e:
+            print(f"Error using alignment for station_to_gis: {e}")
+            # Fall back to the original method
+    
+    # Original method using vector calculation
     # Calculate distance in GIS units
     station_distance = target_station - reference_station
     gis_distance = station_distance * track_params['scale']
