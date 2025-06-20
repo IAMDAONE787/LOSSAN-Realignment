@@ -167,3 +167,9 @@ def calculate_radius_from_degree_of_curve(degree_of_curve):
     radius = 5729.578 / degree_of_curve
     
     return radius 
+
+def format_station(station_value):
+    """Format a station value as XX+XX.XX"""
+    station_main = int(station_value / 100)
+    station_decimal = station_value - (station_main * 100)
+    return f"{station_main}+{station_decimal:.2f}" 

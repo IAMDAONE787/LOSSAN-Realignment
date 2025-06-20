@@ -101,40 +101,6 @@ with main_content:
     
     # Search button
     search = st.sidebar.button("Search")
-    
-    # Track visibility options
-    st.sidebar.subheader("Track Visibility")
-    
-    # Initialize session state for track visibility if not present
-    if "track_visibility" not in st.session_state:
-        st.session_state.track_visibility = {
-            "yellow": True,
-            "blue": True,
-            "purple": True,
-            "green": True,
-            "northern_yellow": True
-        }
-    
-    # Create toggle options for each track
-    st.sidebar.checkbox("Yellow Track", value=st.session_state.track_visibility["yellow"], 
-                        key="yellow_track_visible", 
-                        on_change=lambda: st.session_state.track_visibility.update({"yellow": st.session_state.yellow_track_visible}))
-    
-    st.sidebar.checkbox("Blue Track", value=st.session_state.track_visibility["blue"], 
-                        key="blue_track_visible", 
-                        on_change=lambda: st.session_state.track_visibility.update({"blue": st.session_state.blue_track_visible}))
-    
-    st.sidebar.checkbox("Purple Track", value=st.session_state.track_visibility["purple"], 
-                        key="purple_track_visible", 
-                        on_change=lambda: st.session_state.track_visibility.update({"purple": st.session_state.purple_track_visible}))
-    
-    st.sidebar.checkbox("Green Track", value=st.session_state.track_visibility["green"], 
-                        key="green_track_visible", 
-                        on_change=lambda: st.session_state.track_visibility.update({"green": st.session_state.green_track_visible}))
-    
-    st.sidebar.checkbox("Northern Yellow Track", value=st.session_state.track_visibility["northern_yellow"], 
-                        key="northern_yellow_track_visible", 
-                        on_change=lambda: st.session_state.track_visibility.update({"northern_yellow": st.session_state.northern_yellow_track_visible}))
 
     # Initialize session state for location if not present
     if "location" not in st.session_state:
@@ -972,358 +938,44 @@ with main_content:
     m.get_root().html.add_child(folium.Element(css))
     
     # Add the entire alignment to the map
-    if st.session_state.track_visibility["yellow"]:
-        yellow_alignment.add_to_map(
-            m=m, 
-            start_ref_point_name="STA_2000", 
-            track_params=track_params,
-            add_markers=False  # Hide all pin points
-        )
+    yellow_alignment.add_to_map(
+        m=m, 
+        start_ref_point_name="STA_2000", 
+        track_params=track_params,
+        add_markers=False  # Hide all pin points
+    )
     
-    # Define track type sections for the Yellow alignment
-    # Find which segment is the Third Curve for the bridge segment
-    segment_index_limit = None
-    for i, segment in enumerate(yellow_alignment.segments):
-        if segment.type == "spiral_curve_spiral" and segment.name == "Third Curve":
-            segment_index_limit = i
-            break
-    
-    # Calculate station values for key points
-    if segment_index_limit is not None:
-        # Bridge segment - from start to SC point of third curve
-        yellow_alignment.add_track_type_section(
-            track_type="Bridge",
-            start_station="20+00",
-            end_station="79+17.38",  # SC point of third curve
-            color="#FFD700",
-            tooltip="Yellow Track: Bridge"
-        )
-        
-        # Cut and Cover Tunnel - circular part of third curve
-        yellow_alignment.add_track_type_section(
-            track_type="Cut and Cover Tunnel",
-            start_station="79+17.38",  # SC point of third curve
-            end_station="87+52.17",  # CS point of third curve
-            color="#FFD700",
-            tooltip="Yellow Track: Cut and Cover Tunnel"
-        )
-        
-        # Bored Tunnel - from exit spiral of third curve to middle of seventh tangent
-        seventh_tangent_index = None
-        for i, segment in enumerate(yellow_alignment.segments):
-            if segment.type == "tangent" and segment.name == "Seventh Tangent":
-                seventh_tangent_index = i
-                break
-        
-        if seventh_tangent_index is not None:
-            seventh_tangent = yellow_alignment.segments[seventh_tangent_index]
-            midpoint_station = (seventh_tangent.start_station_value + seventh_tangent.end_station_value) / 2
-            
-            yellow_alignment.add_track_type_section(
-                track_type="Bored Tunnel",
-                start_station="87+52.17",  # CS point of third curve
-                end_station=midpoint_station,  # Middle of seventh tangent
-                color="#FFD700",
-                tooltip="Yellow Track: Bored Tunnel"
-            )
-            
-            # Second Cut and Cover Tunnel - second half of seventh tangent
-            yellow_alignment.add_track_type_section(
-                track_type="Cut and Cover Tunnel",
-                start_station=midpoint_station,  # Middle of seventh tangent
-                end_station=seventh_tangent.end_station_value,  # End of seventh tangent
-                color="#FFD700",
-                tooltip="Yellow Track: Cut and Cover Tunnel"
-            )
-            
-            # Find the seventh curve for U-Section
-            seventh_curve_index = None
-            for i, segment in enumerate(yellow_alignment.segments):
-                if segment.type == "spiral_curve_spiral" and segment.name == "Seventh Curve":
-                    seventh_curve_index = i
-                    break
-            
-            if seventh_curve_index is not None:
-                seventh_curve = yellow_alignment.segments[seventh_curve_index]
-                curve_midpoint = seventh_curve.ts_station_value + (seventh_curve.st_station_value - seventh_curve.ts_station_value) / 2
-                
-                # U-Section - first half of seventh curve
-                yellow_alignment.add_track_type_section(
-                    track_type="U-Section",
-                    start_station=seventh_tangent.end_station_value,  # End of seventh tangent
-                    end_station=curve_midpoint,  # Middle of seventh curve
-                    color="#FFD700",
-                    tooltip="Yellow Track: U-Section"
-                )
-                
-                # Standard track for the rest
-                yellow_alignment.add_track_type_section(
-                    track_type="Standard Track",
-                    start_station=curve_midpoint,  # Middle of seventh curve
-                    end_station="304+93.02",  # End of alignment
-                    color="#FFD700",
-                    tooltip="Yellow Track"
-                )
-    
-    # Render the yellow track type sections
-    if st.session_state.track_visibility["yellow"]:
-        yellow_alignment.render_track_type_sections(m)
-    
-    # Add the blue alignment to the map with hidden technical details
-    if st.session_state.track_visibility["blue"]:
-        blue_alignment.add_to_map(
-            m=m,
-            start_ref_point_name="STA_500",
-            track_params=blue_track_params,
-            add_markers=False  # Hide all pin points
-        )
-        
-        # Define track type sections for the Blue alignment
-        blue_alignment.add_track_type_section(
-            track_type="Blue Track Initial Tangent",
-            start_station="5+00",
-            end_station="14+00",
-            color="blue",
-            tooltip="Blue Track"
-        )
-        
-        blue_alignment.add_track_type_section(
-            track_type="Floodwalls",
-            start_station="14+00",
-            end_station="20+00",
-            color="blue",
-            tooltip="Blue Track: Floodwalls"
-        )
-        
-        blue_alignment.add_track_type_section(
-            track_type="U-Section",
-            start_station="20+00",
-            end_station="26+00",
-            color="blue",
-            tooltip="Blue Track: U-Section"
-        )
-        
-        blue_alignment.add_track_type_section(
-            track_type="Cut and Cover Tunnel",
-            start_station="26+00",
-            end_station="30+00",
-            color="blue",
-            tooltip="Blue Track: Cut and Cover Tunnel"
-        )
-        
-        blue_alignment.add_track_type_section(
-            track_type="Bored Tunnel",
-            start_station="30+00",
-            end_station="195+00",
-            color="blue",
-            tooltip="Blue Track: Bored Tunnel"
-        )
-        
-        blue_alignment.add_track_type_section(
-            track_type="Cut and Cover Tunnel",
-            start_station="195+00",
-            end_station="204+00",
-            color="blue",
-            tooltip="Blue Track: Cut and Cover Tunnel"
-        )
-        
-        blue_alignment.add_track_type_section(
-            track_type="U-Section",
-            start_station="204+00",
-            end_station="224+00",
-            color="blue",
-            tooltip="Blue Track: U-Section"
-        )
-
-        blue_alignment.add_track_type_section(
-            track_type="Blue Track Last Tangent",
-            start_station="224+00",
-            end_station="274+32.35",
-            color="blue",
-            tooltip="Blue Track"
-        )
-        
-        # Render the blue track type sections
-        blue_alignment.render_track_type_sections(m)
+    # Add the blue alignment to the map
+    blue_alignment.add_to_map(
+        m=m,
+        start_ref_point_name="STA_500",
+        track_params=blue_track_params,
+        add_markers=False  # Hide all pin points
+    )
     
     # Add the purple alignment to the map
-    if st.session_state.track_visibility["purple"]:
-        purple_alignment.add_to_map(
-            m=m,
-            start_ref_point_name="STA_500",
-            track_params=purple_track_params,
-            add_markers=False  # Hide all pin points
-        )
-        
-        # Define track type sections for the Purple alignment
-        purple_alignment.add_track_type_section(
-            track_type="Purple Track Initial Tangent",
-            start_station="5+00",
-            end_station="11+00",
-            color="magenta",
-            tooltip="Purple Track"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="Floodwalls",
-            start_station="11+00",
-            end_station="19+00",
-            color="magenta",
-            tooltip="Purple Track: Floodwalls"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="U-Section",
-            start_station="19+00",
-            end_station="26+00",
-            color="magenta",
-            tooltip="Purple Track: U-Section"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="Cut and Cover Tunnel",
-            start_station="26+00",
-            end_station="30+00",
-            color="magenta",
-            tooltip="Purple Track: Cut and Cover Tunnel"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="Bored Tunnel",
-            start_station="30+00",
-            end_station="129+00",
-            color="magenta",
-            tooltip="Purple Track: Bored Tunnel"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="Cut and Cover Tunnel",
-            start_station="129+00",
-            end_station="130+00",
-            color="magenta",
-            tooltip="Purple Track: Cut and Cover Tunnel"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="U-Section",
-            start_station="130+00",
-            end_station="133+00",
-            color="magenta",
-            tooltip="Purple Track: U-Section"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="Bridge",
-            start_station="133+00",
-            end_station="180+00",
-            color="magenta",
-            tooltip="Purple Track: Bridge"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="Purple Track Middle Tangent",
-            start_station="180+00",
-            end_station="187+00",
-            color="magenta",
-            tooltip="Purple Track"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="Bridge",
-            start_station="187+00",
-            end_station="199+00",
-            color="magenta",
-            tooltip="Purple Track: Bridge"
-        )
-        
-        purple_alignment.add_track_type_section(
-            track_type="Purple Track Last Tangent",
-            start_station="199+00",
-            end_station="280+89.19",
-            color="magenta",
-            tooltip="Purple Track"
-        )
-        
-        # Render the purple track type sections
-        purple_alignment.render_track_type_sections(m)
+    purple_alignment.add_to_map(
+        m=m,
+        start_ref_point_name="STA_500",
+        track_params=purple_track_params,
+        add_markers=False  # Hide all pin points
+    )
     
     # Add the green alignment to the map
-    if st.session_state.track_visibility["green"]:
-        green_alignment.add_to_map(
-            m=m,
-            start_ref_point_name="STA_500",
-            track_params=green_track_params,
-            add_markers=False  # Hide all pin points
-        )
-        
-        # Define track type sections for the Green alignment
-        green_alignment.add_track_type_section(
-            track_type="Green Track Initial Tangent",
-            start_station="5+00",
-            end_station="48+00",
-            color="green",
-            tooltip="Green Track"
-        )
-        
-        green_alignment.add_track_type_section(
-            track_type="Trench",
-            start_station="48+00",
-            end_station="89+00",
-            color="green",
-            tooltip="Green Track: Trench"
-        )
-        
-        green_alignment.add_track_type_section(
-            track_type="Green Track Middle Tangent",
-            start_station="89+00",
-            end_station="141+00",
-            color="green",
-            tooltip="Green Track"
-        )
-        
-        green_alignment.add_track_type_section(
-            track_type="Bridge",
-            start_station="141+00",
-            end_station="184+00",
-            color="green",
-            tooltip="Green Track: Bridge"
-        )
-        
-        green_alignment.add_track_type_section(
-            track_type="Green Track Short Tangent",
-            start_station="184+00",
-            end_station="191+00",
-            color="green",
-            tooltip="Green Track"
-        )
-        
-        green_alignment.add_track_type_section(
-            track_type="Bridge",
-            start_station="191+00",
-            end_station="203+00",
-            color="green",
-            tooltip="Green Track: Bridge"
-        )
-        
-        green_alignment.add_track_type_section(
-            track_type="Green Track Last Tangent",
-            start_station="203+00",
-            end_station="284+97.94",
-            color="green",
-            tooltip="Green Track"
-        )
-        
-        # Render the green track type sections
-        green_alignment.render_track_type_sections(m)
+    green_alignment.add_to_map(
+        m=m,
+        start_ref_point_name="STA_500",
+        track_params=green_track_params,
+        add_markers=False  # Hide all pin points
+    )
     
     # Add the Northern Yellow alignment to the map
-    if st.session_state.track_visibility["northern_yellow"]:
-        northern_yellow_alignment.add_to_map(
-            m=m,
-            start_ref_point_name="STA_2000",
-            track_params=northern_yellow_track_params,
-            add_markers=False  # Hide all pin points
-        )
+    northern_yellow_alignment.add_to_map(
+        m=m,
+        start_ref_point_name="STA_2000",
+        track_params=northern_yellow_track_params,
+        add_markers=False  # Hide all pin points
+    )
     
     # Define all portals using the Portal class
     portals = [
@@ -1365,18 +1017,82 @@ with main_content:
     
     # Add all portals to the map
     for portal in portals:
-        # Only add portals for tracks that are visible
-        track_alignment = portal.track_alignment
-        if track_alignment == yellow_alignment and st.session_state.track_visibility["yellow"]:
-            portal.add_to_map(m)
-        elif track_alignment == blue_alignment and st.session_state.track_visibility["blue"]:
-            portal.add_to_map(m)
-        elif track_alignment == purple_alignment and st.session_state.track_visibility["purple"]:
-            portal.add_to_map(m)
-        elif track_alignment == green_alignment and st.session_state.track_visibility["green"]:
-            portal.add_to_map(m)
-        elif track_alignment == northern_yellow_alignment and st.session_state.track_visibility["northern_yellow"]:
-            portal.add_to_map(m)
+        portal.add_to_map(m)
+    
+    # Add an animated green path overlay
+    if green_alignment.all_coords:
+        # Add a solid base line
+        folium.PolyLine(
+            locations=green_alignment.all_coords,
+            color='green',
+            weight=7,
+            opacity=0.7,
+            tooltip="Green Route: Del Mar Bluffs Double-Track"
+        ).add_to(m)
+        
+        # Add animated path
+        AntPath(
+            locations=green_alignment.all_coords,
+            dash_array=[10, 20],
+            delay=800,
+            color='green',
+            pulseColor='white',
+            paused=False,
+            weight=5,
+            opacity=0.9,
+            tooltip="Green Route: Del Mar Bluffs Double-Track",
+            className="green-route-overlay"  # Special class to allow hover
+        ).add_to(m)
+    
+    # Add an animated blue path overlay
+    if blue_alignment.all_coords:
+        # Add a solid base line
+        folium.PolyLine(
+            locations=blue_alignment.all_coords,
+            color='blue',
+            weight=7,
+            opacity=0.7,
+            tooltip="Blue Route: Under Crest Canyon"
+        ).add_to(m)
+        
+        # Add animated path
+        AntPath(
+            locations=blue_alignment.all_coords,
+            dash_array=[10, 20],
+            delay=800,
+            color='blue',
+            pulseColor='white',
+            paused=False,
+            weight=5,
+            opacity=0.9,
+            tooltip="Blue Route: Under Crest Canyon",
+            className="blue-route-overlay"  # Special class to allow hover
+        ).add_to(m)
+    
+    # Add an animated purple path overlay
+    if purple_alignment.all_coords:
+        # Add a solid base line
+        folium.PolyLine(
+            locations=purple_alignment.all_coords,
+            color='magenta',
+            weight=7,
+            opacity=0.7,
+            tooltip="Purple Route: Under Camino Del Mar"
+        ).add_to(m)
+        
+        # Add animated path
+        AntPath(
+            locations=purple_alignment.all_coords,
+            dash_array=[10, 20],
+            delay=800,
+            color='magenta',
+            pulseColor='white',
+            paused=False,
+            weight=5,
+            opacity=0.9,
+            tooltip="Purple Route: Under Camino Del Mar",
+            className="purple-route-overlay"  # Special class to allow hover
+        ).add_to(m)
     
     # Add animated path for the Northern Yellow track
     if northern_yellow_alignment.all_coords:
@@ -1407,6 +1123,71 @@ with main_content:
     # Use the improved station_to_gis function with the alignment parameter
     from utils.engineering_coords import station_to_gis
     
+    # Get the blue track's reference points
+    blue_ref_point = blue_alignment.reference_points["STA_500"]["coords"]
+    blue_ref_station = blue_alignment.reference_points["STA_500"]["station"]
+    
+    # Calculate the coordinates for station 26+00 using the improved function
+    jimmy_durante_station = 2600  # 26+00
+    jimmy_durante_portal_point = station_to_gis(
+        reference_point=blue_ref_point,
+        reference_station=blue_ref_station,
+        target_station=jimmy_durante_station,
+        track_params=blue_track_params,
+        alignment=blue_alignment  # Pass the alignment object
+    )
+    
+    print(f"Jimmy Durante Portal coordinates: {jimmy_durante_portal_point}")
+    
+    # Define custom icon for the Jimmy Durante Portal
+    jimmy_durante_icon = folium.DivIcon(
+        icon_size=(30, 30),
+        icon_anchor=(15, 15),
+        html="""
+        <div style="
+            background-color: blue;
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        ">T</div>
+        """
+    )
+    
+    # Add the marker to the map
+    folium.Marker(
+        location=jimmy_durante_portal_point,
+        tooltip="Jimmy Durante Blvd Portal",
+        popup="<b>Jimmy Durante Blvd Portal</b>",
+        icon=jimmy_durante_icon
+    ).add_to(m)
+    
+    # Find SC point of the third curve for Racetrack View Dr Portal marker
+    racetrack_portal_point = None
+    
+    # Calculate the coordinates for station 82+00 on the yellow track
+    yellow_ref_point = yellow_alignment.reference_points["STA_2000"]["coords"]
+    yellow_ref_station = yellow_alignment.reference_points["STA_2000"]["station"]
+    
+    # Calculate the coordinates for station 82+00 using the station_to_gis function
+    racetrack_station = 8200  # 82+00
+    racetrack_portal_point = station_to_gis(
+        reference_point=yellow_ref_point,
+        reference_station=yellow_ref_station,
+        target_station=racetrack_station,
+        track_params=track_params,
+        alignment=yellow_alignment  # Pass the alignment object
+    )
+    
+    print(f"Racetrack View Dr Portal coordinates at 82+00: {racetrack_portal_point}")
+    
     # Find which segment is the Third Curve for the bridge segment
     segment_index_limit = None
     for i, segment in enumerate(yellow_alignment.segments):
@@ -1417,12 +1198,11 @@ with main_content:
     # Collect coordinates for "Yellow Track: Bridge" segment
     bridge_segment_coords = []
     
-    # If we found the Third Curve and yellow track is visible, collect all coordinates up to its SC point
-    if segment_index_limit is not None and st.session_state.track_visibility["yellow"] and hasattr(yellow_alignment, 'segment_coords') and yellow_alignment.segment_coords:
+    # If we found the Third Curve, collect all coordinates up to its SC point
+    if segment_index_limit is not None:
         # Add all coordinates from previous segments
         for i in range(segment_index_limit):
-            if i < len(yellow_alignment.segment_coords):
-                bridge_segment_coords.extend(yellow_alignment.segment_coords[i])
+            bridge_segment_coords.extend(yellow_alignment.segment_coords[i])
         
         # Get the SC point directly from the third curve - this is the Racetrack View Portal location
         third_curve = yellow_alignment.segments[segment_index_limit]
@@ -1435,13 +1215,12 @@ with main_content:
         # and then trim it back to ensure we don't end short
         
         # Get the first half of the third curve with extra points
-        if segment_index_limit < len(yellow_alignment.segment_coords):
-            third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
-            
-            # Take the first 40% of points to ensure we go beyond the SC point
-            # (the entry spiral is typically about 30% of the total curve)
-            points_to_include = int(len(third_curve_coords) * 0.4)
-            bridge_segment_coords.extend(third_curve_coords[:points_to_include])
+        third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
+        
+        # Take the first 40% of points to ensure we go beyond the SC point
+        # (the entry spiral is typically about 30% of the total curve)
+        points_to_include = int(len(third_curve_coords) * 0.4)
+        bridge_segment_coords.extend(third_curve_coords[:points_to_include])
         
         # Now determine which point in our collected coordinates is closest to the SC point
         closest_idx = -1
@@ -1473,7 +1252,7 @@ with main_content:
     
     # Create a "Yellow Track: Bridge" overlay for the entire segment
     
-    if bridge_segment_coords and st.session_state.track_visibility["yellow"]:
+    if bridge_segment_coords:
         # Add a solid, thick line first to completely cover the original
         yellow_bridge_line = folium.PolyLine(
             locations=bridge_segment_coords,
@@ -1499,7 +1278,7 @@ with main_content:
         ).add_to(m)
     
     # Add animated paths for the rest of the alignment (after the bridge section)
-    if segment_index_limit is not None and st.session_state.track_visibility["yellow"]:
+    if segment_index_limit is not None:
         # Add the rest of the third curve (after SC point)
         third_curve = yellow_alignment.segments[segment_index_limit]
         third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
@@ -1819,6 +1598,29 @@ with main_content:
                         opacity=0.9,
                         tooltip="Yellow Track: Cut and Cover Tunnel"
                     ).add_to(m)
+        
+        # We've already rendered the bored tunnel segment earlier when we reached the 2nd cut and cover tunnel
+        # So we don't need to render it again here
+        #if bored_tunnel_coords:
+        #    yellow_bored_tunnel_line_2 = folium.PolyLine(
+        #        locations=bored_tunnel_coords,
+        #        color='#FFD700',
+        #        weight=9,  # Extra thick to ensure complete coverage
+        #        opacity=1.0,
+        #        tooltip="Yellow Track: Bored Tunnel",
+        #    ).add_to(m)
+        #
+        #    AntPath(
+        #        locations=bored_tunnel_coords,
+        #        dash_array=[10, 20],
+        #        delay=600,
+        #        color='#FFD700',
+        #        pulseColor='#FFFFFF',
+        #        paused=False,
+        #        weight=5,
+        #        opacity=0.9,
+        #        tooltip="Yellow Track: Bored Tunnel"
+        #    ).add_to(m)
     
     print("\nBearings at key points in railway alignment:")
     for i, segment in enumerate(yellow_alignment.segments):
@@ -2089,6 +1891,37 @@ with main_content:
                     st.sidebar.write(f"Radius: {int(radius_ft)} ft")
                     st.sidebar.write(f"Degree of Curve: {degree_curve:.2f}°")
 
+    # Add the Racetrack View Dr Portal marker
+    if racetrack_portal_point:
+        # Define custom icon with shadow, larger size, and more prominent appearance
+        tunnel_icon = folium.DivIcon(
+            icon_size=(30, 30),
+            icon_anchor=(15, 15),
+            html="""
+            <div style="
+                background-color: red;
+                width: 24px;
+                height: 24px;
+                border-radius: 12px;
+                border: 3px solid white;
+                box-shadow: 0 0 10px rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 16px;
+            ">T</div>
+            """
+        )
+        
+        folium.Marker(
+            location=racetrack_portal_point,
+            tooltip="Racetrack View Dr Portal",
+            popup="<b>Racetrack View Dr Portal</b><br>Yellow Track Station 82+00",
+            icon=tunnel_icon
+        ).add_to(m)
+
     # --- 4. render ---
     # Set the map height to fill available space while leaving room for header and footer
     st_folium(m, width="100%")
@@ -2102,14 +1935,6 @@ with footer_cols[0]:
     Disclaimer:
     The four proposed routes and their associated distance calculations presented in this interactive map are based on the most recent publicly available documentation from SANDAG: San Diego LOSSAN Rail Realignment Project Post Value Analysis Study Assessment – Appendix A: Exhibits of the Staff-Recommended Alignments (published May 16, 2025). This tool is for informational and educational purposes only and is not an official source of project data. Users should refer directly to SANDAG for authoritative and up-to-date project information. 
     """)
-with footer_cols[1]:
-    st.markdown("""
-    **Created by:** Nathan Qiu  
-    **Contact:** [nathanqiu07@gmail.com](mailto:nathanqiu07@gmail.com)
-    """)
-st.markdown("</div>", unsafe_allow_html=True)
-
-
 with footer_cols[1]:
     st.markdown("""
     **Created by:** Nathan Qiu  

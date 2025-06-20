@@ -175,6 +175,82 @@ class CurveSegment(RailwaySegment):
             
         return self.st_point, self.st_bearing
 
+class TrackTypeSection:
+    """Class representing a section of track with a specific construction type"""
+    
+    def __init__(self, track_type, start_station, end_station, color=None, tooltip=None):
+        """
+        Initialize a track type section
+        
+        Args:
+            track_type: Type of track construction (e.g., "Bored Tunnel", "Bridge")
+            start_station: Starting station value or string
+            end_station: Ending station value or string
+            color: Color for this section (optional)
+            tooltip: Tooltip text to display on hover (optional)
+        """
+        self.track_type = track_type
+        
+        # Parse station values if they are strings
+        if isinstance(start_station, str):
+            self.start_station_value = parse_station(start_station)
+            self.start_station = start_station
+        else:
+            self.start_station_value = start_station
+            self.start_station = f"{int(start_station/100)}+{start_station % 100:02.0f}"
+            
+        if isinstance(end_station, str):
+            self.end_station_value = parse_station(end_station)
+            self.end_station = end_station
+        else:
+            self.end_station_value = end_station
+            self.end_station = f"{int(end_station/100)}+{end_station % 100:02.0f}"
+        
+        self.color = color
+        self.tooltip = tooltip or f"{track_type} ({self.start_station} to {self.end_station})"
+        self.coords = []
+        
+    def add_to_map(self, m, coords, color=None, weight=7, opacity=0.9, add_ant_path=True):
+        """
+        Add this track section to the map
+        
+        Args:
+            m: Folium map object
+            coords: List of coordinates for this section
+            color: Override color (optional)
+            weight: Line weight
+            opacity: Line opacity
+            add_ant_path: Whether to add animated ant path
+        """
+        self.coords = coords
+        use_color = color or self.color
+        
+        # Add base polyline
+        folium.PolyLine(
+            locations=coords,
+            color=use_color,
+            weight=weight,
+            opacity=opacity,
+            tooltip=self.tooltip
+        ).add_to(m)
+        
+        # Add animated path if requested
+        if add_ant_path:
+            from folium.plugins import AntPath
+            AntPath(
+                locations=coords,
+                dash_array=[10, 20],
+                delay=800,
+                color=use_color,
+                pulseColor='white',
+                paused=False,
+                weight=weight - 2,  # Slightly thinner for the animated path
+                opacity=opacity,
+                tooltip=self.tooltip
+            ).add_to(m)
+            
+        return coords
+
 class RailwayAlignment:
     """Class representing a complete railway alignment with multiple segments"""
     
@@ -185,6 +261,17 @@ class RailwayAlignment:
         self.segment_coords = []
         self.all_coords = []
         self.reference_points = {}
+        
+        # Track type sections
+        self.track_type_sections = []
+        self.track_types = {
+            "Standard Track": [],
+            "Bridge": [],
+            "Cut and Cover Tunnel": [],
+            "Bored Tunnel": [],
+            "U-Section": [],
+            "Elevated": []
+        }
         
     def add_reference_point(self, name, coords, station_value):
         """Add a reference point with known coordinates and station value"""
@@ -226,6 +313,141 @@ class RailwayAlignment:
         )
         self.add_segment(segment)
         return segment
+    
+    def add_track_type_section(self, track_type, start_station, end_station, color=None, tooltip=None):
+        """
+        Add a track type section to the alignment
+        
+        Args:
+            track_type: Type of track construction (e.g., "Bored Tunnel", "Bridge")
+            start_station: Starting station value or string
+            end_station: Ending station value or string
+            color: Color for this section (optional)
+            tooltip: Tooltip text to display on hover (optional)
+        
+        Returns:
+            The created TrackTypeSection object
+        """
+        section = TrackTypeSection(
+            track_type=track_type,
+            start_station=start_station,
+            end_station=end_station,
+            color=color or self.color,
+            tooltip=tooltip
+        )
+        
+        self.track_type_sections.append(section)
+        
+        # Add to the appropriate track type list
+        if track_type in self.track_types:
+            self.track_types[track_type].append(section)
+        else:
+            self.track_types[track_type] = [section]
+            
+        return section
+    
+    def get_coordinates_for_station_range(self, start_station, end_station):
+        """
+        Get coordinates for a range of stations
+        
+        Args:
+            start_station: Starting station value
+            end_station: Ending station value
+            
+        Returns:
+            List of coordinate tuples within the station range
+        """
+        if not self.all_coords:
+            raise ValueError("Alignment must be added to map first")
+            
+        # Convert station strings to values if needed
+        if isinstance(start_station, str):
+            start_station_value = parse_station(start_station)
+        else:
+            start_station_value = start_station
+            
+        if isinstance(end_station, str):
+            end_station_value = parse_station(end_station)
+        else:
+            end_station_value = end_station
+        
+        # Find coordinates within the station range
+        coords = []
+        current_station = 0
+        
+        for i, segment in enumerate(self.segments):
+            segment_start_station = current_station
+            
+            if segment.type == "tangent":
+                segment_end_station = segment_start_station + segment.length_ft
+            elif segment.type == "spiral_curve_spiral":
+                segment_end_station = segment_start_station + segment.entry_spiral_length + segment.circular_arc_length + segment.exit_spiral_length
+            else:
+                segment_end_station = segment_start_station  # Unknown segment type
+                
+            # Check if this segment overlaps with our range
+            if segment_end_station >= start_station_value and segment_start_station <= end_station_value:
+                # Calculate percentage along segment for start and end points
+                segment_coords = self.segment_coords[i]
+                
+                if segment_start_station <= start_station_value <= segment_end_station:
+                    # Start point is in this segment
+                    start_pct = (start_station_value - segment_start_station) / (segment_end_station - segment_start_station)
+                    start_idx = int(start_pct * (len(segment_coords) - 1))
+                else:
+                    # Start point is before this segment
+                    start_idx = 0
+                    
+                if segment_start_station <= end_station_value <= segment_end_station:
+                    # End point is in this segment
+                    end_pct = (end_station_value - segment_start_station) / (segment_end_station - segment_start_station)
+                    end_idx = int(end_pct * (len(segment_coords) - 1)) + 1  # +1 to include the end point
+                else:
+                    # End point is after this segment
+                    end_idx = len(segment_coords)
+                    
+                # Add the coordinates within the range
+                coords.extend(segment_coords[start_idx:end_idx])
+                
+            current_station = segment_end_station
+            
+        return coords
+    
+    def render_track_type_sections(self, m):
+        """
+        Render all track type sections on the map
+        
+        Args:
+            m: Folium map object
+        """
+        for section in self.track_type_sections:
+            coords = self.get_coordinates_for_station_range(
+                section.start_station_value, 
+                section.end_station_value
+            )
+            if coords:
+                # Add a solid base line first for better visibility
+                folium.PolyLine(
+                    locations=coords,
+                    color=section.color or self.color,
+                    weight=8,  # Slightly thicker for the base
+                    opacity=0.9,
+                    tooltip=section.tooltip
+                ).add_to(m)
+                
+                # Add animated path on top
+                from folium.plugins import AntPath
+                AntPath(
+                    locations=coords,
+                    dash_array=[10, 20],
+                    delay=800,
+                    color=section.color or self.color,
+                    pulseColor='white',
+                    paused=False,
+                    weight=5,
+                    opacity=0.9,
+                    tooltip=section.tooltip
+                ).add_to(m)
     
     def calculate_track_params(self, ref_point1_name, ref_point2_name):
         """Calculate track parameters based on two reference points"""
@@ -300,5 +522,9 @@ class RailwayAlignment:
                     tooltip=f"Reference: {name} (STA {ref_point['station']})",
                     icon=folium.Icon(color="black", icon="map-pin", prefix="fa")
                 ).add_to(m)
+        
+        # Render track type sections if any exist
+        if self.track_type_sections:
+            self.render_track_type_sections(m)
             
         return self.all_coords 
