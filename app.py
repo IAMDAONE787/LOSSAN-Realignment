@@ -99,9 +99,6 @@ with main_content:
     # Simple text input for address without autocomplete
     address_input = st.sidebar.text_input("Enter address", value=st.session_state.get("address", ""))
     
-    # Search button
-    search = st.sidebar.button("Search")
-    
     # Track visibility options
     st.sidebar.subheader("Track Visibility")
     
@@ -114,6 +111,16 @@ with main_content:
             "green": True,
             "northern_yellow": True
         }
+    
+    # Check if any tracks are visible
+    any_tracks_visible = any(st.session_state.track_visibility.values())
+    
+    # Search button - disable if no tracks are visible
+    if not any_tracks_visible and address_input:
+        st.sidebar.warning("Please enable at least one track before searching")
+        search = False
+    else:
+        search = st.sidebar.button("Search")
     
     # Create toggle options for each track
     st.sidebar.checkbox("Yellow Track", value=st.session_state.track_visibility["yellow"], 
@@ -195,143 +202,7 @@ with main_content:
     # Dictionary to store expanded coordinates for each alignment
     expanded_alignments = {}
 
-    # add routes for Blue, Purple, and Green tracks
-    for name, data in ALIGNMENTS.items():
-        # Get original coordinates
-        coords = data["coords"]
-        
-        # Generate a smooth path with straight segments and curved corners
-        smoothed_coords = []
-        
-        # Need at least 3 points to have corners to smooth
-        if len(coords) < 3:
-            smoothed_coords = coords.copy()
-        else:
-            # Process each vertex (where two segments meet)
-            for i in range(len(coords)):
-                # First point - just add it
-                if i == 0:
-                    smoothed_coords.append(coords[i])
-                    continue
-                    
-                # Last point - just add it
-                if i == len(coords) - 1:
-                    smoothed_coords.append(coords[i])
-                    continue
-                    
-                # This is a vertex between two segments
-                p1 = coords[i-1]  # Previous point
-                p2 = coords[i]    # Current vertex
-                p3 = coords[i+1]  # Next point
-                
-                # Calculate distances
-                dist1 = geodesic(p1, p2).meters
-                dist2 = geodesic(p2, p3).meters
-                
-                # Skip very short segments
-                if dist1 < 20 or dist2 < 20:
-                    smoothed_coords.append(p2)
-                    continue
-                
-                # Calculate vectors
-                v1 = np.array([p2[0] - p1[0], p2[1] - p1[1]])
-                v2 = np.array([p3[0] - p2[0], p3[1] - p2[1]])
-                
-                # Normalize vectors
-                v1_norm = v1 / np.linalg.norm(v1)
-                v2_norm = v2 / np.linalg.norm(v2)
-                
-                # Calculate angle between segments
-                dot_product = np.clip(np.dot(v1_norm, v2_norm), -1.0, 1.0)
-                angle = np.degrees(np.arccos(dot_product))
-                
-                # Skip if angle is very small (almost straight)
-                if angle < 5:
-                    smoothed_coords.append(p2)
-                    continue
-                    
-                # Determine turn direction using cross product
-                cross_product = v1_norm[0]*v2_norm[1] - v1_norm[1]*v2_norm[0]
-                direction = 'right' if cross_product < 0 else 'left'
-                
-                # Define how much of each segment to use for the curve
-                # Use a fraction of the shorter segment, but limit curve length
-                curve_length = min(dist1, dist2) * 0.3  # Use 30% of shorter segment
-                curve_length = min(curve_length, 200)   # But no more than 200 meters
-                curve_length = max(curve_length, 50)    # And no less than 50 meters
-                
-                # Calculate points for the start and end of the curve
-                # Move back from p2 along v1 by curve_length
-                curve_start_factor = curve_length / dist1
-                curve_start = (
-                    p2[0] - v1_norm[0] * curve_length / 111000,  # Convert meters to degrees lat
-                    p2[1] - v1_norm[1] * curve_length / (111000 * np.cos(np.radians(p2[0])))  # Convert to degrees lon
-                )
-                
-                # Move forward from p2 along v2 by curve_length
-                curve_end_factor = curve_length / dist2
-                curve_end = (
-                    p2[0] + v2_norm[0] * curve_length / 111000,  # Convert meters to degrees lat
-                    p2[1] + v2_norm[1] * curve_length / (111000 * np.cos(np.radians(p2[0])))  # Convert to degrees lon
-                )
-                
-                # Add straight segment from previous point to curve start
-                # Only do this for points after the first vertex
-                if i > 1:
-                    # Create a few points along the straight segment for better visualization
-                    for j in range(1, 4):
-                        t = j / 4
-                        lat = smoothed_coords[-1][0] + t * (curve_start[0] - smoothed_coords[-1][0])
-                        lon = smoothed_coords[-1][1] + t * (curve_start[1] - smoothed_coords[-1][1])
-                        smoothed_coords.append((lat, lon))
-                
-                # Choose curve type based on angle
-                if angle > 60:
-                    # For sharper turns, use circular curve
-                    curve_radius = curve_length * 3  # Larger radius for smoother curve
-                    curve_points = create_circular_curve(
-                        start_point=curve_start,
-                        end_point=curve_end,
-                        radius=curve_radius,
-                        direction=direction,
-                        steps=10
-                    )
-                else:
-                    # For gentler turns, use spiral curve
-                    curve_points = create_spiral_curve(
-                        start_point=curve_start,
-                        end_point=curve_end,
-                        direction=direction,
-                        steps=10
-                    )
-                
-                # Add all curve points
-                smoothed_coords.extend(curve_points)
-        
-        # Store expanded coordinates for distance calculations
-        expanded_alignments[name] = smoothed_coords
-        
-        # Add a solid base line for better visibility
-        folium.PolyLine(
-            locations=smoothed_coords,
-            color=data["color"],
-            weight=7,
-            opacity=0.7,
-            tooltip=name
-        ).add_to(m)
-        
-        # Add animated path on top
-        AntPath(
-            locations=smoothed_coords,
-            dash_array=[10, 15],
-            delay=800,
-            color=data["color"],
-            pulseColor='#FFFFFF',
-            paused=False,
-            weight=4,
-            opacity=0.9,
-            tooltip=name
-        ).add_to(m)
+    
 
     # === YELLOW TRACK ENGINEERING MODEL ===
     # Create the yellow track using the engineering specifications and directly add to map
@@ -471,6 +342,7 @@ with main_content:
     
     # Ninth tangent segment
     yellow_ninth_tangent = yellow_alignment.add_tangent("296+93.38", "304+93.02", name="Ninth Tangent")
+
     
     # === BLUE TRACK ENGINEERING MODEL ===
     # Create the blue track using the engineering specifications and directly add to map
@@ -979,91 +851,63 @@ with main_content:
             track_params=track_params,
             add_markers=False  # Hide all pin points
         )
-    
-    # Define track type sections for the Yellow alignment
-    # Find which segment is the Third Curve for the bridge segment
-    segment_index_limit = None
-    for i, segment in enumerate(yellow_alignment.segments):
-        if segment.type == "spiral_curve_spiral" and segment.name == "Third Curve":
-            segment_index_limit = i
-            break
-    
-    # Calculate station values for key points
-    if segment_index_limit is not None:
-        # Bridge segment - from start to SC point of third curve
+        
+        # Define track type sections for the Yellow alignment
+        yellow_alignment.add_track_type_section(
+            track_type="Yellow Track Initial Tangent",
+            start_station="20+00",
+            end_station="24+00",
+            color="#FFD700",
+            tooltip="Yellow Track"
+        )
+        
         yellow_alignment.add_track_type_section(
             track_type="Bridge",
-            start_station="20+00",
-            end_station="79+17.38",  # SC point of third curve
+            start_station="24+00",
+            end_station="78+00",
             color="#FFD700",
             tooltip="Yellow Track: Bridge"
         )
         
-        # Cut and Cover Tunnel - circular part of third curve
         yellow_alignment.add_track_type_section(
             track_type="Cut and Cover Tunnel",
-            start_station="79+17.38",  # SC point of third curve
-            end_station="87+52.17",  # CS point of third curve
+            start_station="78+00",
+            end_station="86+00",
             color="#FFD700",
             tooltip="Yellow Track: Cut and Cover Tunnel"
         )
         
-        # Bored Tunnel - from exit spiral of third curve to middle of seventh tangent
-        seventh_tangent_index = None
-        for i, segment in enumerate(yellow_alignment.segments):
-            if segment.type == "tangent" and segment.name == "Seventh Tangent":
-                seventh_tangent_index = i
-                break
+        yellow_alignment.add_track_type_section(
+            track_type="Bored Tunnel",
+            start_station="86+00",
+            end_station="226+00",
+            color="#FFD700",
+            tooltip="Yellow Track: Bored Tunnel"
+        )
         
-        if seventh_tangent_index is not None:
-            seventh_tangent = yellow_alignment.segments[seventh_tangent_index]
-            midpoint_station = (seventh_tangent.start_station_value + seventh_tangent.end_station_value) / 2
-            
-            yellow_alignment.add_track_type_section(
-                track_type="Bored Tunnel",
-                start_station="87+52.17",  # CS point of third curve
-                end_station=midpoint_station,  # Middle of seventh tangent
-                color="#FFD700",
-                tooltip="Yellow Track: Bored Tunnel"
-            )
-            
-            # Second Cut and Cover Tunnel - second half of seventh tangent
-            yellow_alignment.add_track_type_section(
-                track_type="Cut and Cover Tunnel",
-                start_station=midpoint_station,  # Middle of seventh tangent
-                end_station=seventh_tangent.end_station_value,  # End of seventh tangent
-                color="#FFD700",
-                tooltip="Yellow Track: Cut and Cover Tunnel"
-            )
-            
-            # Find the seventh curve for U-Section
-            seventh_curve_index = None
-            for i, segment in enumerate(yellow_alignment.segments):
-                if segment.type == "spiral_curve_spiral" and segment.name == "Seventh Curve":
-                    seventh_curve_index = i
-                    break
-            
-            if seventh_curve_index is not None:
-                seventh_curve = yellow_alignment.segments[seventh_curve_index]
-                curve_midpoint = seventh_curve.ts_station_value + (seventh_curve.st_station_value - seventh_curve.ts_station_value) / 2
-                
-                # U-Section - first half of seventh curve
-                yellow_alignment.add_track_type_section(
-                    track_type="U-Section",
-                    start_station=seventh_tangent.end_station_value,  # End of seventh tangent
-                    end_station=curve_midpoint,  # Middle of seventh curve
-                    color="#FFD700",
-                    tooltip="Yellow Track: U-Section"
-                )
-                
-                # Standard track for the rest
-                yellow_alignment.add_track_type_section(
-                    track_type="Standard Track",
-                    start_station=curve_midpoint,  # Middle of seventh curve
-                    end_station="304+93.02",  # End of alignment
-                    color="#FFD700",
-                    tooltip="Yellow Track"
-                )
+        yellow_alignment.add_track_type_section(
+            track_type="Cut and Cover Tunnel",
+            start_station="226+00",
+            end_station="234+00",
+            color="#FFD700",
+            tooltip="Yellow Track: Cut and Cover Tunnel"
+        )
+        
+        yellow_alignment.add_track_type_section(
+            track_type="U-Section",
+            start_station="234+00",
+            end_station="255+00",
+            color="#FFD700",
+            tooltip="Yellow Track: U-Section"
+        )
+        
+        yellow_alignment.add_track_type_section(
+            track_type="Yellow Track Last Tangent",
+            start_station="255+00",
+            end_station="304+93.02",
+            color="#FFD700",
+            tooltip="Yellow Track"
+        )
     
     # Render the yellow track type sections
     if st.session_state.track_visibility["yellow"]:
@@ -1324,6 +1168,8 @@ with main_content:
             track_params=northern_yellow_track_params,
             add_markers=False  # Hide all pin points
         )
+
+        northern_yellow_alignment.render_track_type_sections(m)
     
     # Define all portals using the Portal class
     portals = [
@@ -1403,438 +1249,6 @@ with main_content:
             className="northern-yellow-route-overlay"  # Special class to allow hover
         ).add_to(m)
     
-    # Add Jimmy Durante Blvd Portal marker on the blue track at station 26+00
-    # Use the improved station_to_gis function with the alignment parameter
-    from utils.engineering_coords import station_to_gis
-    
-    # Find which segment is the Third Curve for the bridge segment
-    segment_index_limit = None
-    for i, segment in enumerate(yellow_alignment.segments):
-        if segment.type == "spiral_curve_spiral" and segment.name == "Third Curve":
-            segment_index_limit = i
-            break
-    
-    # Collect coordinates for "Yellow Track: Bridge" segment
-    bridge_segment_coords = []
-    
-    # If we found the Third Curve and yellow track is visible, collect all coordinates up to its SC point
-    if segment_index_limit is not None and st.session_state.track_visibility["yellow"] and hasattr(yellow_alignment, 'segment_coords') and yellow_alignment.segment_coords:
-        # Add all coordinates from previous segments
-        for i in range(segment_index_limit):
-            if i < len(yellow_alignment.segment_coords):
-                bridge_segment_coords.extend(yellow_alignment.segment_coords[i])
-        
-        # Get the SC point directly from the third curve - this is the Racetrack View Portal location
-        third_curve = yellow_alignment.segments[segment_index_limit]
-        sc_point = third_curve.sc_point
-        
-        # Debug print to verify coordinates
-        print(f"SC Point coordinates: {sc_point}")
-        
-        # For the third curve, we'll add ALL points from TS to a point BEYOND the SC point
-        # and then trim it back to ensure we don't end short
-        
-        # Get the first half of the third curve with extra points
-        if segment_index_limit < len(yellow_alignment.segment_coords):
-            third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
-            
-            # Take the first 40% of points to ensure we go beyond the SC point
-            # (the entry spiral is typically about 30% of the total curve)
-            points_to_include = int(len(third_curve_coords) * 0.4)
-            bridge_segment_coords.extend(third_curve_coords[:points_to_include])
-        
-        # Now determine which point in our collected coordinates is closest to the SC point
-        closest_idx = -1
-        min_distance = float('inf')
-        
-        # Start from the halfway point of our bridge segment to speed up the search
-        start_idx = len(bridge_segment_coords) // 2
-        for i in range(start_idx, len(bridge_segment_coords)):
-            point = bridge_segment_coords[i]
-            dx = point[0] - sc_point[0]
-            dy = point[1] - sc_point[1]
-            distance = dx*dx + dy*dy
-            
-            if distance < min_distance:
-                min_distance = distance
-                closest_idx = i
-        
-        # Trim the bridge coordinates to end at the closest point to SC
-        if closest_idx > 0:
-            bridge_segment_coords = bridge_segment_coords[:closest_idx+1]
-        
-        # Always make sure the exact SC point is the last point
-        if not (bridge_segment_coords[-1][0] == sc_point[0] and bridge_segment_coords[-1][1] == sc_point[1]):
-            bridge_segment_coords.append(sc_point)
-            
-        # Debug print to verify the endpoint
-        print(f"Bridge segment endpoint: {bridge_segment_coords[-1]}")
-        print(f"Bridge segment length: {len(bridge_segment_coords)} points")
-    
-    # Create a "Yellow Track: Bridge" overlay for the entire segment
-    
-    if bridge_segment_coords and st.session_state.track_visibility["yellow"]:
-        # Add a solid, thick line first to completely cover the original
-        yellow_bridge_line = folium.PolyLine(
-            locations=bridge_segment_coords,
-            color='#FFD700',
-            weight=9,  # Extra thick to ensure complete coverage
-            opacity=1.0,
-            tooltip="Yellow Track: Bridge",
-            className="yellow-bridge-overlay"  # Special class to allow hover
-        ).add_to(m)
-        
-        # Add animated path on top with the same special class
-        AntPath(
-            locations=bridge_segment_coords,
-            dash_array=[10, 20],
-            delay=800,
-            color='#FFD700',
-            pulseColor='#FFFFFF',
-            paused=False,
-            weight=5,  # Slightly thicker to ensure it's on top
-            opacity=0.95,
-            tooltip="Yellow Track: Bridge",
-            className="yellow-bridge-overlay"  # Special class to allow hover
-        ).add_to(m)
-    
-    # Add animated paths for the rest of the alignment (after the bridge section)
-    if segment_index_limit is not None and st.session_state.track_visibility["yellow"]:
-        # Add the rest of the third curve (after SC point)
-        third_curve = yellow_alignment.segments[segment_index_limit]
-        third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
-        
-        entry_spiral_length = third_curve.entry_spiral_length
-        circular_arc_length = third_curve.circular_arc_length
-        exit_spiral_length = third_curve.exit_spiral_length
-        total_curve_length = entry_spiral_length + circular_arc_length + exit_spiral_length
-        
-        # Calculate approximately how many points to include for each portion
-        if len(third_curve_coords) > 0:
-            points_per_unit = len(third_curve_coords) / total_curve_length
-            entry_spiral_points = int(entry_spiral_length * points_per_unit)
-            circular_arc_points = int(circular_arc_length * points_per_unit)
-            
-            # Extract the circular curve coordinates (for Cut and Cover tunnel)
-            circular_curve_start = entry_spiral_points
-            circular_curve_end = entry_spiral_points + circular_arc_points
-            circular_curve_coords = third_curve_coords[circular_curve_start:circular_curve_end]
-            
-            # Extract the exit spiral coordinates
-            exit_spiral_coords = third_curve_coords[circular_curve_end:]
-            
-            # Add the remaining portion of the entry spiral (after the portal)
-            entry_spiral_after_portal = third_curve_coords[entry_spiral_points//2:entry_spiral_points]
-            if entry_spiral_after_portal:
-                AntPath(
-                    locations=entry_spiral_after_portal,
-                    dash_array=[10, 20],
-                    delay=600,
-                    color='#FFD700',
-                    pulseColor='#FFFFFF',
-                    paused=False,
-                    weight=5,
-                    opacity=0.9,
-                    tooltip=f"{third_curve.name} - Entry Spiral"
-                ).add_to(m)
-            
-            # Add the circular curve with Cut and Cover tunnel label but same appearance
-            if circular_curve_coords:
-                yellow_cut_and_cover_line_1 = folium.PolyLine(
-                    locations=circular_curve_coords,
-                    color='#FFD700',
-                    weight=9,  # Extra thick to ensure complete coverage
-                    opacity=1.0,
-                    tooltip="Yellow Track: Cut and Cover Tunnel",
-                    className="yellow-cut-and-cover-overlay"  # Special class to allow hover
-                ).add_to(m)
-                
-                AntPath(
-                    locations=circular_curve_coords,
-                    dash_array=[10, 20],
-                    delay=600,
-                    color='#FFD700',
-                    pulseColor='#FFFFFF',
-                    paused=False,
-                    weight=5,
-                    opacity=0.9,
-                    tooltip="Yellow Track: Cut and Cover Tunnel",
-                    className="yellow-cut-and-cover-overlay"
-                ).add_to(m)
-            
-            # Add the exit spiral
-            if exit_spiral_coords:
-                yellow_bored_tunnel_line = folium.PolyLine(
-                    locations=exit_spiral_coords,
-                    color='#FFD700',
-                    weight=9,  # Extra thick to ensure complete coverage
-                    opacity=1.0,
-                    tooltip="Yellow Track: Bored Tunnel",
-                ).add_to(m)
-
-                AntPath(
-                    locations=exit_spiral_coords,
-                    dash_array=[10, 20],
-                    delay=600,
-                    color='#FFD700',
-                    pulseColor='#FFFFFF',
-                    paused=False,
-                    weight=5,
-                    opacity=0.9,
-                    tooltip="Yellow Track: Bored Tunnel"
-                ).add_to(m)
-        
-        
-        # Combine all remaining segments after the cut and cover tunnel into one "Bored Tunnel" segment
-        if segment_index_limit is not None:
-            # Collect all coordinates from remaining segments
-            bored_tunnel_coords = []
-            
-            # First add the exit spiral of the third curve if not already added
-            if segment_index_limit < len(yellow_alignment.segments) and not exit_spiral_coords:
-                third_curve = yellow_alignment.segments[segment_index_limit]
-                third_curve_coords = yellow_alignment.segment_coords[segment_index_limit]
-                
-                # Calculate segment boundaries
-                points_per_unit = len(third_curve_coords) / total_curve_length
-                entry_spiral_points = int(entry_spiral_length * points_per_unit)
-                circular_arc_points = int(circular_arc_length * points_per_unit)
-                exit_spiral_start = entry_spiral_points + circular_arc_points
-                
-                # Add exit spiral points
-                bored_tunnel_coords.extend(third_curve_coords[exit_spiral_start:])
-        
-            # Add a flag to track if we've already processed the 7th tangent
-            processed_seventh_tangent = False
-        
-        # Then add all remaining segments
-        for i in range(segment_index_limit + 1, len(yellow_alignment.segments)):
-            segment = yellow_alignment.segments[i]
-            segment_coords = yellow_alignment.segment_coords[i]
-            
-            # Special handling for the 7th tangent - split it into two halves
-            if segment.type == "tangent" and segment.name == "Seventh Tangent":
-                # Set the flag to indicate we've processed the 7th tangent
-                processed_seventh_tangent = True
-                
-                # Find the next segment (7th curve)
-                i5_knoll_portal_point = None
-                for j, next_segment in enumerate(yellow_alignment.segments):
-                    if next_segment.type == "spiral_curve_spiral" and next_segment.name == "Seventh Curve":
-                        # Get the TS point of the 7th curve as the I-5 Knoll Portal location
-                        i5_knoll_portal_point = next_segment.ts_point
-                        break
-                
-                # Calculate the midpoint
-                midpoint_index = len(segment_coords) // 2
-                
-                # First half of 7th tangent - add to bored tunnel
-                first_half_coords = segment_coords[:midpoint_index]
-                bored_tunnel_coords.extend(first_half_coords)
-                
-                # Second half of 7th tangent - add as separate "Cut and Cover Tunnel" segment
-                # Only goes to the end of the tangent (beginning of 7th curve)
-                second_half_coords = segment_coords[midpoint_index:]
-                
-                # Add the second half as a Cut and Cover Tunnel segment
-                yellow_cut_and_cover_line_2 = folium.PolyLine(
-                    locations=second_half_coords,
-                    color='#FFD700',
-                    weight=9,  # Extra thick to ensure complete coverage
-                    opacity=1.0,
-                    tooltip="Yellow Track: Cut and Cover Tunnel",
-                    className="yellow-cut-and-cover-overlay"  # Special class to allow hover
-                ).add_to(m)
-                
-                AntPath(
-                    locations=second_half_coords,
-                    dash_array=[10, 20],
-                    delay=600,
-                    color='#FFD700',
-                    pulseColor='#FFFFFF',
-                    paused=False,
-                    weight=5,
-                    opacity=0.9,
-                    tooltip="Yellow Track: Cut and Cover Tunnel"
-                ).add_to(m)
-                
-                # Add the I-5 Knoll Portal marker at the end of the cut and cover segment
-                if i5_knoll_portal_point:
-                    # Define custom icon for the I-5 Knoll Portal
-                    knoll_portal_icon = folium.DivIcon(
-                        icon_size=(30, 30),
-                        icon_anchor=(15, 15),
-                        html="""
-                        <div style="
-                            background-color: #B8860B;
-                            width: 24px;
-                            height: 24px;
-                            border-radius: 12px;
-                            border: 3px solid white;
-                            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-weight: bold;
-                            font-size: 16px;
-                        ">T</div>
-                        """
-                    )
-                    
-                    folium.Marker(
-                        location=i5_knoll_portal_point,
-                        tooltip="I-5 Knoll Portal",
-                        popup="<b>I-5 Knoll Portal</b>",
-                        icon=knoll_portal_icon
-                    ).add_to(m)
-                
-                # Since we've reached the 2nd cut and cover segment, stop adding segments to the bored tunnel
-                # Add the bored tunnel segment now
-                if bored_tunnel_coords:
-                    yellow_bored_tunnel_line_2 = folium.PolyLine(
-                        locations=bored_tunnel_coords,
-                        color='#FFD700',
-                        weight=9,  # Extra thick to ensure complete coverage
-                        opacity=1.0,
-                        tooltip="Yellow Track: Bored Tunnel",
-                    ).add_to(m)
-        
-                    AntPath(
-                        locations=bored_tunnel_coords,
-                        dash_array=[10, 20],
-                        delay=600,
-                        color='#FFD700',
-                        pulseColor='#FFFFFF',
-                        paused=False,
-                        weight=5,
-                        opacity=0.9,
-                        tooltip="Yellow Track: Bored Tunnel"
-                    ).add_to(m)
-                
-                # Clear the bored tunnel coordinates as we don't want to add any more segments to it
-                bored_tunnel_coords = []
-            elif not processed_seventh_tangent:
-                # For segments before the 7th tangent, add to bored tunnel
-                bored_tunnel_coords.extend(segment_coords)
-            elif segment.type == "spiral_curve_spiral" and segment.name == "Seventh Curve":
-                # Handle the seventh curve separately (not part of cut and cover)
-                
-                # Split the curve into two halves
-                midpoint_index = len(segment_coords) // 2
-                first_half_coords = segment_coords[:midpoint_index]
-                second_half_coords = segment_coords[midpoint_index:]
-                
-                # Add the first half as "U-Section"
-                yellow_u_section_line = folium.PolyLine(
-                    locations=first_half_coords,
-                    color='#FFD700',
-                    weight=9,  # Extra thick to ensure complete coverage
-                    opacity=1.0,
-                    tooltip="Yellow Track: U-Section",
-                ).add_to(m)
-                
-                AntPath(
-                    locations=first_half_coords,
-                    dash_array=[10, 20],
-                    delay=600,
-                    color='#FFD700',
-                    pulseColor='#FFFFFF',
-                    paused=False,
-                    weight=5,
-                    opacity=0.9,
-                    tooltip="Yellow Track: U-Section"
-                ).add_to(m)
-                
-                # Add the second half as "Bored Tunnel"
-                yellow_bored_tunnel_line_curve7 = folium.PolyLine(
-                    locations=second_half_coords,
-                    color='#FFD700',
-                    weight=9,  # Extra thick to ensure complete coverage
-                    opacity=1.0,
-                    tooltip="Yellow Track",
-                ).add_to(m)
-                
-                AntPath(
-                    locations=second_half_coords,
-                    dash_array=[10, 20],
-                    delay=600,
-                    color='#FFD700',
-                    pulseColor='#FFFFFF',
-                    paused=False,
-                    weight=5,
-                    opacity=0.9,
-                    tooltip="Yellow Track"
-                ).add_to(m)
-            else:
-                # For segments after the 7th curve, add them with the appropriate styling
-                is_after_seventh_curve = False
-                
-                # Check if we're past the 7th curve
-                for j, check_segment in enumerate(yellow_alignment.segments):
-                    if check_segment.type == "spiral_curve_spiral" and check_segment.name == "Seventh Curve":
-                        is_after_seventh_curve = i > j
-                        break
-                
-                # All segments after the 7th curve should be plain "Yellow Track" segments
-                if is_after_seventh_curve:
-                    # For segments after the U-Section (second half of 7th curve), add as basic track
-                    yellow_segment_line = folium.PolyLine(
-                        locations=segment_coords,
-                        color='#FFD700',
-                        weight=9,  # Extra thick to ensure complete coverage
-                        opacity=1.0,
-                        tooltip="Yellow Track",
-                    ).add_to(m)
-                    
-                    AntPath(
-                        locations=segment_coords,
-                        dash_array=[10, 20],
-                        delay=600,
-                        color='#FFD700',
-                        pulseColor='#FFFFFF',
-                        paused=False,
-                        weight=5,
-                        opacity=0.9,
-                        tooltip="Yellow Track"
-                    ).add_to(m)
-                else:
-                    # For segments between the 1st and 2nd cut and cover tunnels, maintain as cut and cover
-                    yellow_segment_line = folium.PolyLine(
-                        locations=segment_coords,
-                        color='#FFD700',
-                        weight=9,  # Extra thick to ensure complete coverage
-                        opacity=1.0,
-                        tooltip="Yellow Track: Cut and Cover Tunnel",
-                    ).add_to(m)
-                    
-                    AntPath(
-                        locations=segment_coords,
-                        dash_array=[10, 20],
-                        delay=600,
-                        color='#FFD700',
-                        pulseColor='#FFFFFF',
-                        paused=False,
-                        weight=5,
-                        opacity=0.9,
-                        tooltip="Yellow Track: Cut and Cover Tunnel"
-                    ).add_to(m)
-    
-    print("\nBearings at key points in railway alignment:")
-    for i, segment in enumerate(yellow_alignment.segments):
-        if segment.type == "tangent":
-            bearing_str = f"{segment.manual_bearing}° (manual)" if segment.manual_bearing is not None else "calculated"
-            print(f"Tangent {i+1} ({segment.name}): {bearing_str}")
-        elif segment.type == "spiral_curve_spiral":
-            print(f"Curve {i+1} ({segment.name}):")
-            print(f"  TS bearing: {segment.ts_bearing:.2f}°")
-            print(f"  SC bearing: {segment.sc_bearing:.2f}°")
-            print(f"  CS bearing: {segment.cs_bearing:.2f}°")
-            print(f"  ST bearing: {segment.st_bearing:.2f}°")
-            print(f"  Direction: {segment.direction}")
-            print(f"  Radius: {segment.radius_ft:.2f} ft")
-            print(f"  Degree of curve: {segment.degree_value:.4f}°")
-
     # if we have a valid location, plot it + compute distances
     if location:
         addr_pt = (location.latitude, location.longitude)
@@ -1845,6 +1259,16 @@ with main_content:
 
         st.sidebar.markdown("## Distances to Each Alignment")
         for name, data in expanded_alignments.items():
+            # Skip if the track is not visible
+            track_name = name.lower().split()[0]  # Extract first word (yellow, blue, etc.)
+            
+            # Special case for "Northern Yellow"
+            if "northern" in track_name:
+                track_name = "northern_yellow"
+                
+            if track_name in st.session_state.track_visibility and not st.session_state.track_visibility[track_name]:
+                continue
+                
             # Create a LineString from the coordinates
             smoothed_coords = data
             
@@ -1880,214 +1304,160 @@ with main_content:
             st.sidebar.write(f"- {dist_miles} mi")
             
         # Calculate distance to yellow track
-        yellow_line = LineString([(lon, lat) for lat, lon in yellow_alignment.all_coords])
-        yellow_nearest = yellow_line.interpolate(yellow_line.project(pt))
-        yellow_nearest_lat, yellow_nearest_lon = yellow_nearest.y, yellow_nearest.x
-        yellow_dist_m = geodesic(addr_pt, (yellow_nearest_lat, yellow_nearest_lon)).meters
-        
-        # Convert to different units and round
-        yellow_dist_ft = round(yellow_dist_m * 3.28084)  # Convert meters to feet
-        yellow_dist_m_rounded = round(yellow_dist_m / 10) * 10  # Round to nearest 10 meters
-        yellow_dist_km = round(yellow_dist_m / 1000, 1)  # Round to 0.1 km
-        yellow_dist_miles = round(yellow_dist_m * 0.000621371, 1)  # Round to 0.1 miles
-        
-        # Draw a connector
-        folium.PolyLine(
-            [addr_pt, (yellow_nearest_lat, yellow_nearest_lon)],
-            color="#FF7700",
-            weight=2,
-            dash_array="5,5"
-        ).add_to(m)
-        
-        # Display the distance to Yellow track
-        st.sidebar.write("**Yellow Route: Engineering Alignment:**")
-        st.sidebar.write(f"- {yellow_dist_ft} ft")
-        st.sidebar.write(f"- {yellow_dist_m_rounded} m")
-        st.sidebar.write(f"- {yellow_dist_km} km")
-        st.sidebar.write(f"- {yellow_dist_miles} mi")
+        if st.session_state.track_visibility["yellow"] and yellow_alignment.all_coords:
+            yellow_line = LineString([(lon, lat) for lat, lon in yellow_alignment.all_coords])
+            yellow_nearest = yellow_line.interpolate(yellow_line.project(pt))
+            yellow_nearest_lat, yellow_nearest_lon = yellow_nearest.y, yellow_nearest.x
+            yellow_dist_m = geodesic(addr_pt, (yellow_nearest_lat, yellow_nearest_lon)).meters
+            
+            # Convert to different units and round
+            yellow_dist_ft = round(yellow_dist_m * 3.28084)  # Convert meters to feet
+            yellow_dist_m_rounded = round(yellow_dist_m / 10) * 10  # Round to nearest 10 meters
+            yellow_dist_km = round(yellow_dist_m / 1000, 1)  # Round to 0.1 km
+            yellow_dist_miles = round(yellow_dist_m * 0.000621371, 1)  # Round to 0.1 miles
+            
+            # Draw a connector
+            folium.PolyLine(
+                [addr_pt, (yellow_nearest_lat, yellow_nearest_lon)],
+                color="#FF7700",
+                weight=2,
+                dash_array="5,5"
+            ).add_to(m)
+            
+            # Display the distance to Yellow track
+            st.sidebar.write("**Yellow Route: Engineering Alignment:**")
+            st.sidebar.write(f"- {yellow_dist_ft} ft")
+            st.sidebar.write(f"- {yellow_dist_m_rounded} m")
+            st.sidebar.write(f"- {yellow_dist_km} km")
+            st.sidebar.write(f"- {yellow_dist_miles} mi")
         
         # Calculate distance to blue track
-        blue_line = LineString([(lon, lat) for lat, lon in blue_alignment.all_coords])
-        blue_nearest = blue_line.interpolate(blue_line.project(pt))
-        blue_nearest_lat, blue_nearest_lon = blue_nearest.y, blue_nearest.x
-        blue_dist_m = geodesic(addr_pt, (blue_nearest_lat, blue_nearest_lon)).meters
-        
-        # Convert to different units and round
-        blue_dist_ft = round(blue_dist_m * 3.28084)  # Convert meters to feet
-        blue_dist_m_rounded = round(blue_dist_m / 10) * 10  # Round to nearest 10 meters
-        blue_dist_km = round(blue_dist_m / 1000, 1)  # Round to 0.1 km
-        blue_dist_miles = round(blue_dist_m * 0.000621371, 1)  # Round to 0.1 miles
-        
-        # Draw a connector
-        folium.PolyLine(
-            [addr_pt, (blue_nearest_lat, blue_nearest_lon)],
-            color="blue",
-            weight=2,
-            dash_array="5,5"
-        ).add_to(m)
-        
-        # Display the distance to Blue track
-        st.sidebar.write("**Blue Route: Under Crest Canyon:**")
-        st.sidebar.write(f"- {blue_dist_ft} ft")
-        st.sidebar.write(f"- {blue_dist_m_rounded} m")
-        st.sidebar.write(f"- {blue_dist_km} km")
-        st.sidebar.write(f"- {blue_dist_miles} mi")
+        if st.session_state.track_visibility["blue"] and blue_alignment.all_coords:
+            blue_line = LineString([(lon, lat) for lat, lon in blue_alignment.all_coords])
+            blue_nearest = blue_line.interpolate(blue_line.project(pt))
+            blue_nearest_lat, blue_nearest_lon = blue_nearest.y, blue_nearest.x
+            blue_dist_m = geodesic(addr_pt, (blue_nearest_lat, blue_nearest_lon)).meters
+            
+            # Convert to different units and round
+            blue_dist_ft = round(blue_dist_m * 3.28084)  # Convert meters to feet
+            blue_dist_m_rounded = round(blue_dist_m / 10) * 10  # Round to nearest 10 meters
+            blue_dist_km = round(blue_dist_m / 1000, 1)  # Round to 0.1 km
+            blue_dist_miles = round(blue_dist_m * 0.000621371, 1)  # Round to 0.1 miles
+            
+            # Draw a connector
+            folium.PolyLine(
+                [addr_pt, (blue_nearest_lat, blue_nearest_lon)],
+                color="blue",
+                weight=2,
+                dash_array="5,5"
+            ).add_to(m)
+            
+            # Display the distance to Blue track
+            st.sidebar.write("**Blue Route: Under Crest Canyon:**")
+            st.sidebar.write(f"- {blue_dist_ft} ft")
+            st.sidebar.write(f"- {blue_dist_m_rounded} m")
+            st.sidebar.write(f"- {blue_dist_km} km")
+            st.sidebar.write(f"- {blue_dist_miles} mi")
         
         # Calculate distance to purple track
-        purple_line = LineString([(lon, lat) for lat, lon in purple_alignment.all_coords])
-        purple_nearest = purple_line.interpolate(purple_line.project(pt))
-        purple_nearest_lat, purple_nearest_lon = purple_nearest.y, purple_nearest.x
-        purple_dist_m = geodesic(addr_pt, (purple_nearest_lat, purple_nearest_lon)).meters
-        
-        # Convert to different units and round
-        purple_dist_ft = round(purple_dist_m * 3.28084)  # Convert meters to feet
-        purple_dist_m_rounded = round(purple_dist_m / 10) * 10  # Round to nearest 10 meters
-        purple_dist_km = round(purple_dist_m / 1000, 1)  # Round to 0.1 km
-        purple_dist_miles = round(purple_dist_m * 0.000621371, 1)  # Round to 0.1 miles
-        
-        # Draw a connector
-        folium.PolyLine(
-            [addr_pt, (purple_nearest_lat, purple_nearest_lon)],
-            color="magenta",
-            weight=2,
-            dash_array="5,5"
-        ).add_to(m)
-        
-        # Display the distance to Purple track
-        st.sidebar.write("**Purple Route: Under Camino Del Mar:**")
-        st.sidebar.write(f"- {purple_dist_ft} ft")
-        st.sidebar.write(f"- {purple_dist_m_rounded} m")
-        st.sidebar.write(f"- {purple_dist_km} km")
-        st.sidebar.write(f"- {purple_dist_miles} mi")
+        if st.session_state.track_visibility["purple"] and purple_alignment.all_coords:
+            purple_line = LineString([(lon, lat) for lat, lon in purple_alignment.all_coords])
+            purple_nearest = purple_line.interpolate(purple_line.project(pt))
+            purple_nearest_lat, purple_nearest_lon = purple_nearest.y, purple_nearest.x
+            purple_dist_m = geodesic(addr_pt, (purple_nearest_lat, purple_nearest_lon)).meters
+            
+            # Convert to different units and round
+            purple_dist_ft = round(purple_dist_m * 3.28084)  # Convert meters to feet
+            purple_dist_m_rounded = round(purple_dist_m / 10) * 10  # Round to nearest 10 meters
+            purple_dist_km = round(purple_dist_m / 1000, 1)  # Round to 0.1 km
+            purple_dist_miles = round(purple_dist_m * 0.000621371, 1)  # Round to 0.1 miles
+            
+            # Draw a connector
+            folium.PolyLine(
+                [addr_pt, (purple_nearest_lat, purple_nearest_lon)],
+                color="magenta",
+                weight=2,
+                dash_array="5,5"
+            ).add_to(m)
+            
+            # Display the distance to Purple track
+            st.sidebar.write("**Purple Route: Under Camino Del Mar:**")
+            st.sidebar.write(f"- {purple_dist_ft} ft")
+            st.sidebar.write(f"- {purple_dist_m_rounded} m")
+            st.sidebar.write(f"- {purple_dist_km} km")
+            st.sidebar.write(f"- {purple_dist_miles} mi")
         
         # Calculate distance to green track
-        green_line = LineString([(lon, lat) for lat, lon in green_alignment.all_coords])
-        green_nearest = green_line.interpolate(green_line.project(pt))
-        green_nearest_lat, green_nearest_lon = green_nearest.y, green_nearest.x
-        green_dist_m = geodesic(addr_pt, (green_nearest_lat, green_nearest_lon)).meters
-        
-        # Convert to different units and round
-        green_dist_ft = round(green_dist_m * 3.28084)  # Convert meters to feet
-        green_dist_m_rounded = round(green_dist_m / 10) * 10  # Round to nearest 10 meters
-        green_dist_km = round(green_dist_m / 1000, 1)  # Round to 0.1 km
-        green_dist_miles = round(green_dist_m * 0.000621371, 1)  # Round to 0.1 miles
-        
-        # Draw a connector
-        folium.PolyLine(
-            [addr_pt, (green_nearest_lat, green_nearest_lon)],
-            color="green",
-            weight=2,
-            dash_array="5,5"
-        ).add_to(m)
-        
-        # Display the distance to Green track
-        st.sidebar.write("**Green Route: Del Mar Bluffs Double-Track:**")
-        st.sidebar.write(f"- {green_dist_ft} ft")
-        st.sidebar.write(f"- {green_dist_m_rounded} m")
-        st.sidebar.write(f"- {green_dist_km} km")
-        st.sidebar.write(f"- {green_dist_miles} mi")
+        if st.session_state.track_visibility["green"] and green_alignment.all_coords:
+            green_line = LineString([(lon, lat) for lat, lon in green_alignment.all_coords])
+            green_nearest = green_line.interpolate(green_line.project(pt))
+            green_nearest_lat, green_nearest_lon = green_nearest.y, green_nearest.x
+            green_dist_m = geodesic(addr_pt, (green_nearest_lat, green_nearest_lon)).meters
+            
+            # Convert to different units and round
+            green_dist_ft = round(green_dist_m * 3.28084)  # Convert meters to feet
+            green_dist_m_rounded = round(green_dist_m / 10) * 10  # Round to nearest 10 meters
+            green_dist_km = round(green_dist_m / 1000, 1)  # Round to 0.1 km
+            green_dist_miles = round(green_dist_m * 0.000621371, 1)  # Round to 0.1 miles
+            
+            # Draw a connector
+            folium.PolyLine(
+                [addr_pt, (green_nearest_lat, green_nearest_lon)],
+                color="green",
+                weight=2,
+                dash_array="5,5"
+            ).add_to(m)
+            
+            # Display the distance to Green track
+            st.sidebar.write("**Green Route: Del Mar Bluffs Double-Track:**")
+            st.sidebar.write(f"- {green_dist_ft} ft")
+            st.sidebar.write(f"- {green_dist_m_rounded} m")
+            st.sidebar.write(f"- {green_dist_km} km")
+            st.sidebar.write(f"- {green_dist_miles} mi")
         
         # Calculate distance to Northern Yellow track
-        northern_yellow_line = LineString([(lon, lat) for lat, lon in northern_yellow_alignment.all_coords])
-        northern_yellow_nearest = northern_yellow_line.interpolate(northern_yellow_line.project(pt))
-        northern_yellow_nearest_lat, northern_yellow_nearest_lon = northern_yellow_nearest.y, northern_yellow_nearest.x
-        northern_yellow_dist_m = geodesic(addr_pt, (northern_yellow_nearest_lat, northern_yellow_nearest_lon)).meters
-        
-        # Convert to different units and round
-        northern_yellow_dist_ft = round(northern_yellow_dist_m * 3.28084)  # Convert meters to feet
-        northern_yellow_dist_m_rounded = round(northern_yellow_dist_m / 10) * 10  # Round to nearest 10 meters
-        northern_yellow_dist_km = round(northern_yellow_dist_m / 1000, 1)  # Round to 0.1 km
-        northern_yellow_dist_miles = round(northern_yellow_dist_m * 0.000621371, 1)  # Round to 0.1 miles
-        
-        # Draw a connector
-        folium.PolyLine(
-            [addr_pt, (northern_yellow_nearest_lat, northern_yellow_nearest_lon)],
-            color="orange",
-            weight=2,
-            dash_array="5,5"
-        ).add_to(m)
-        
-        # Display the distance to Northern Yellow track
-        st.sidebar.write("**Northern Yellow Route:**")
-        st.sidebar.write(f"- {northern_yellow_dist_ft} ft")
-        st.sidebar.write(f"- {northern_yellow_dist_m_rounded} m")
-        st.sidebar.write(f"- {northern_yellow_dist_km} km")
-        st.sidebar.write(f"- {northern_yellow_dist_miles} mi")
-        
-        # Find which segment of the northern yellow track is closest
-        northern_yellow_min_distance = float('inf')
-        northern_yellow_closest_segment = None
-        northern_yellow_segment_index = None
-        
-        for i, segment in enumerate(northern_yellow_alignment.segments):
-            segment_linestring = LineString([(lon, lat) for lat, lon in northern_yellow_alignment.segment_coords[i]])
-            segment_nearest = segment_linestring.interpolate(segment_linestring.project(pt))
-            segment_dist = geodesic(addr_pt, (segment_nearest.y, segment_nearest.x)).meters
+        if st.session_state.track_visibility["northern_yellow"] and northern_yellow_alignment.all_coords:
+            northern_yellow_line = LineString([(lon, lat) for lat, lon in northern_yellow_alignment.all_coords])
+            northern_yellow_nearest = northern_yellow_line.interpolate(northern_yellow_line.project(pt))
+            northern_yellow_nearest_lat, northern_yellow_nearest_lon = northern_yellow_nearest.y, northern_yellow_nearest.x
+            northern_yellow_dist_m = geodesic(addr_pt, (northern_yellow_nearest_lat, northern_yellow_nearest_lon)).meters
             
-            if segment_dist < northern_yellow_min_distance:
-                northern_yellow_min_distance = segment_dist
-                northern_yellow_closest_segment = segment
-                northern_yellow_segment_index = i
-        
-        if northern_yellow_closest_segment:
-            # Bold header for closest segment
-            st.sidebar.markdown(f"**Closest Northern Yellow segment: {northern_yellow_closest_segment.name}**")
+            # Convert to different units and round
+            northern_yellow_dist_ft = round(northern_yellow_dist_m * 3.28084)  # Convert meters to feet
+            northern_yellow_dist_m_rounded = round(northern_yellow_dist_m / 10) * 10  # Round to nearest 10 meters
+            northern_yellow_dist_km = round(northern_yellow_dist_m / 1000, 1)  # Round to 0.1 km
+            northern_yellow_dist_miles = round(northern_yellow_dist_m * 0.000621371, 1)  # Round to 0.1 miles
             
-            # Determine approximate station of the closest point
-            if northern_yellow_closest_segment.type == "tangent":
-                # Calculate percentage along the segment
-                segment_linestring = LineString([(lon, lat) for lat, lon in northern_yellow_alignment.segment_coords[northern_yellow_segment_index]])
-                percentage = segment_linestring.project(pt) / segment_linestring.length
+            # Draw a connector
+            folium.PolyLine(
+                [addr_pt, (northern_yellow_nearest_lat, northern_yellow_nearest_lon)],
+                color="orange",
+                weight=2,
+                dash_array="5,5"
+            ).add_to(m)
+            
+            # Display the distance to Northern Yellow track
+            st.sidebar.write("**Northern Yellow Route:**")
+            st.sidebar.write(f"- {northern_yellow_dist_ft} ft")
+            st.sidebar.write(f"- {northern_yellow_dist_m_rounded} m")
+            st.sidebar.write(f"- {northern_yellow_dist_km} km")
+            st.sidebar.write(f"- {northern_yellow_dist_miles} mi")
+            
+            # Find which segment of the northern yellow track is closest
+            northern_yellow_min_distance = float('inf')
+            northern_yellow_closest_segment = None
+            northern_yellow_segment_index = None
+            
+            for i, segment in enumerate(northern_yellow_alignment.segments):
+                segment_linestring = LineString([(lon, lat) for lat, lon in northern_yellow_alignment.segment_coords[i]])
+                segment_nearest = segment_linestring.interpolate(segment_linestring.project(pt))
+                segment_dist = geodesic(addr_pt, (segment_nearest.y, segment_nearest.x)).meters
                 
-                # Interpolate station value
-                station_value = northern_yellow_closest_segment.start_station_value + percentage * (northern_yellow_closest_segment.end_station_value - northern_yellow_closest_segment.start_station_value)
-                
-                # Format station
-                station_formatted = format_station(station_value)
-                
-                st.sidebar.write(f"Approximate Station: {station_formatted}")
-                
-            elif northern_yellow_closest_segment.type == "spiral_curve_spiral":
-                # For curves, show the type of element (entry spiral, circular curve, exit spiral)
-                # Determine which part of the curve is closest
-                
-                # Calculate total curve length
-                total_length = northern_yellow_closest_segment.entry_spiral_length + northern_yellow_closest_segment.circular_arc_length + northern_yellow_closest_segment.exit_spiral_length
-                
-                # Get normalized distance along the curve
-                segment_linestring = LineString([(lon, lat) for lat, lon in northern_yellow_alignment.segment_coords[northern_yellow_segment_index]])
-                curve_distance = segment_linestring.project(pt) / segment_linestring.length * total_length
-                
-                if curve_distance < northern_yellow_closest_segment.entry_spiral_length:
-                    # In entry spiral
-                    percentage = curve_distance / northern_yellow_closest_segment.entry_spiral_length
-                    station_value = northern_yellow_closest_segment.ts_station_value + percentage * (northern_yellow_closest_segment.sc_station_value - northern_yellow_closest_segment.ts_station_value)
-                    element_type = "Entry Spiral"
-                elif curve_distance < northern_yellow_closest_segment.entry_spiral_length + northern_yellow_closest_segment.circular_arc_length:
-                    # In circular curve
-                    distance_in_curve = curve_distance - northern_yellow_closest_segment.entry_spiral_length
-                    percentage = distance_in_curve / northern_yellow_closest_segment.circular_arc_length
-                    station_value = northern_yellow_closest_segment.sc_station_value + percentage * (northern_yellow_closest_segment.cs_station_value - northern_yellow_closest_segment.sc_station_value)
-                    element_type = "Circular Curve"
-                else:
-                    # In exit spiral
-                    distance_in_spiral = curve_distance - northern_yellow_closest_segment.entry_spiral_length - northern_yellow_closest_segment.circular_arc_length
-                    percentage = distance_in_spiral / northern_yellow_closest_segment.exit_spiral_length
-                    station_value = northern_yellow_closest_segment.cs_station_value + percentage * (northern_yellow_closest_segment.st_station_value - northern_yellow_closest_segment.cs_station_value)
-                    element_type = "Exit Spiral"
-                
-                # Format station
-                station_formatted = format_station(station_value)
-                
-                st.sidebar.write(f"Element: {element_type}")
-                st.sidebar.write(f"Approximate Station: {station_formatted}")
-                
-                # Add information about the curve
-                if element_type == "Circular Curve":
-                    radius_ft = northern_yellow_closest_segment.radius_ft
-                    degree_curve = northern_yellow_closest_segment.degree_value
-                    st.sidebar.write(f"Radius: {int(radius_ft)} ft")
-                    st.sidebar.write(f"Degree of Curve: {degree_curve:.2f}°")
+                if segment_dist < northern_yellow_min_distance:
+                    northern_yellow_min_distance = segment_dist
+                    northern_yellow_closest_segment = segment
+                    northern_yellow_segment_index = i
+        
 
     # --- 4. render ---
     # Set the map height to fill available space while leaving room for header and footer
