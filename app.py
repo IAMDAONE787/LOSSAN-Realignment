@@ -1290,12 +1290,12 @@ with main_content:
         {"name": "RC-24-32", "latitude": 32.969438, "longitude": -117.261282},
         {"name": "RC-24-33", "latitude": 32.969282, "longitude": -117.258178},
         {"name": "RC-24-34", "latitude": 32.967745, "longitude": -117.259878},
-        {"name": "RC-24-35", "latitude": 32.967481, "longitude": -117.260000},
-        {"name": "RC-24-36", "latitude": 32.963180, "longitude": -117.260000},
-        {"name": "RC-24-37", "latitude": 32.961115, "longitude": -117.260000},
-        {"name": "RC-24-38", "latitude": 32.951487, "longitude": -117.260000},
-        {"name": "RC-24-38 (Alternate)", "latitude": 32.945097, "longitude": -117.260000},
-        {"name": "RC-24-39", "latitude": 32.938215, "longitude": -117.260000}
+        {"name": "RC-24-35", "latitude": 32.967481, "longitude": -117.251245},
+        {"name": "RC-24-36", "latitude": 32.963180, "longitude": -117.255802},
+        {"name": "RC-24-37", "latitude": 32.961115, "longitude": -117.248894},
+        {"name": "RC-24-38", "latitude": 32.951487, "longitude": -117.244680},
+        {"name": "RC-24-38 (Alternate)", "latitude": 32.945097, "longitude": -117.243998},
+        {"name": "RC-24-39", "latitude": 32.938215, "longitude": -117.242444}
     ]
     
     # Create a feature group for boring markers so they can be toggled as a group
