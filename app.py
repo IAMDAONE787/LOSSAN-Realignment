@@ -148,12 +148,16 @@ with main_content:
     
     # Initialize boring visibility in session state if not present
     if "boring_visibility" not in st.session_state:
+        st.sidebar.write("Debug - Initializing boring_visibility to True")
         st.session_state.boring_visibility = True
     
     # Add checkbox to toggle boring locations
     st.sidebar.checkbox("Show Boring Locations", value=st.session_state.boring_visibility,
                         key="boring_locations_visible",
                         on_change=lambda: setattr(st.session_state, "boring_visibility", st.session_state.boring_locations_visible))
+    
+    # Debug - Show current state after checkbox
+    st.sidebar.write(f"Debug - After checkbox: boring_visibility = {st.session_state.boring_visibility}")
     
     # Add info about boring locations
     with st.sidebar.expander("Boring Locations Info"):
@@ -1298,31 +1302,27 @@ with main_content:
         {"name": "RC-24-39", "latitude": 32.938215, "longitude": -117.260000}
     ]
     
+    # Debug information
+    st.sidebar.write(f"Debug - Boring visibility: {st.session_state.boring_visibility}")
+    st.sidebar.write(f"Debug - Number of boring locations: {len(boring_locations)}")
+    
     # Create a feature group for boring markers so they can be toggled as a group
     boring_markers = folium.FeatureGroup(name="Boring Locations")
     
     # Add each boring marker to the map if boring visibility is enabled
     if st.session_state.boring_visibility:
+        st.sidebar.write("Debug - Adding boring markers to map")
+        markers_added = 0
         for boring in boring_locations:
-            # Create a custom icon for boring markers
-            boring_icon = folium.DivIcon(
-                icon_size=(20, 20),
-                icon_anchor=(10, 10),
-                html=f"""
-                <div style="
-                    background-color: #4B0082;
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 6px;
-                    border: 2px solid white;
-                    box-shadow: 0 0 5px rgba(0,0,0,0.5);
-                "></div>
-                """
-            )
-            
-            # Add marker to the feature group
-            folium.Marker(
+            # Use CircleMarker instead of DivIcon for better compatibility
+            folium.CircleMarker(
                 location=[boring["latitude"], boring["longitude"]],
+                radius=6,
+                color='white',
+                fill=True,
+                fill_color='#4B0082',  # Purple color
+                fill_opacity=1.0,
+                weight=2,
                 tooltip=boring["name"],
                 popup=folium.Popup(
                     f"""
@@ -1333,15 +1333,21 @@ with main_content:
                     </div>
                     """,
                     max_width=300
-                ),
-                icon=boring_icon
+                )
             ).add_to(boring_markers)
+            markers_added += 1
+        
+        st.sidebar.write(f"Debug - {markers_added} boring markers added")
+    else:
+        st.sidebar.write("Debug - Boring markers disabled")
     
     # Add the feature group to the map
     boring_markers.add_to(m)
+    st.sidebar.write("Debug - Boring markers feature group added to map")
     
     # Add a control to toggle boring markers
     folium.LayerControl().add_to(m)
+    st.sidebar.write("Debug - Layer control added to map")
                 
     # if we have a valid location, plot it + compute distances
     if location:
@@ -1608,13 +1614,6 @@ with footer_cols[1]:
     **Created by:** Nathan Qiu  
     **Contact:** [nathanqiu07@gmail.com](mailto:nathanqiu07@gmail.com)
     """)
-st.markdown("</div>", unsafe_allow_html=True)
-
-
-with footer_cols[1]:
-    st.markdown("""
-    **Created by:** Nathan Qiu  
-    **Contact:** [nathanqiu07@gmail.com](mailto:nathanqiu07@gmail.com)
-    """)
+    
 st.markdown("</div>", unsafe_allow_html=True)
 
