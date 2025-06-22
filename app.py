@@ -148,16 +148,12 @@ with main_content:
     
     # Initialize boring visibility in session state if not present
     if "boring_visibility" not in st.session_state:
-        st.sidebar.write("Debug - Initializing boring_visibility to True")
         st.session_state.boring_visibility = True
     
     # Add checkbox to toggle boring locations
     st.sidebar.checkbox("Show Boring Locations", value=st.session_state.boring_visibility,
                         key="boring_locations_visible",
                         on_change=lambda: setattr(st.session_state, "boring_visibility", st.session_state.boring_locations_visible))
-    
-    # Debug - Show current state after checkbox
-    st.sidebar.write(f"Debug - After checkbox: boring_visibility = {st.session_state.boring_visibility}")
     
     # Add info about boring locations
     with st.sidebar.expander("Boring Locations Info"):
@@ -1302,17 +1298,11 @@ with main_content:
         {"name": "RC-24-39", "latitude": 32.938215, "longitude": -117.260000}
     ]
     
-    # Debug information
-    st.sidebar.write(f"Debug - Boring visibility: {st.session_state.boring_visibility}")
-    st.sidebar.write(f"Debug - Number of boring locations: {len(boring_locations)}")
-    
     # Create a feature group for boring markers so they can be toggled as a group
     boring_markers = folium.FeatureGroup(name="Boring Locations")
     
     # Add each boring marker to the map if boring visibility is enabled
     if st.session_state.boring_visibility:
-        st.sidebar.write("Debug - Adding boring markers to map")
-        markers_added = 0
         for boring in boring_locations:
             # Use CircleMarker instead of DivIcon for better compatibility
             folium.CircleMarker(
@@ -1335,19 +1325,12 @@ with main_content:
                     max_width=300
                 )
             ).add_to(boring_markers)
-            markers_added += 1
-        
-        st.sidebar.write(f"Debug - {markers_added} boring markers added")
-    else:
-        st.sidebar.write("Debug - Boring markers disabled")
     
     # Add the feature group to the map
     boring_markers.add_to(m)
-    st.sidebar.write("Debug - Boring markers feature group added to map")
     
     # Add a control to toggle boring markers
     folium.LayerControl().add_to(m)
-    st.sidebar.write("Debug - Layer control added to map")
                 
     # if we have a valid location, plot it + compute distances
     if location:
