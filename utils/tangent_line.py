@@ -90,28 +90,29 @@ def add_railway_tangent_to_map(m, start_point=None, end_point=None, bearing_deg=
                         "3. (start_station, ref_point, ref_station, track_params, length_ft)")
     
     # Add the tangent to the map
-    folium.PolyLine(
-        locations=tangent_coords,
-        color=color,
-        weight=weight,
-        opacity=opacity,
-        tooltip=tooltip or "Tangent Line"
-    ).add_to(m)
-    
-    # Add markers if requested
-    if add_markers and tangent_coords:
-        # Start marker
-        folium.Marker(
-            location=tangent_coords[0],
-            tooltip=f"Tangent Start",
-            icon=folium.Icon(color="blue", icon="info-sign")
+    if m is not None:
+        folium.PolyLine(
+            locations=tangent_coords,
+            color=color,
+            weight=weight,
+            opacity=opacity,
+            tooltip=tooltip or "Tangent Line"
         ).add_to(m)
         
-        # End marker
-        folium.Marker(
-            location=tangent_coords[-1],
-            tooltip=f"Tangent End",
-            icon=folium.Icon(color="green", icon="info-sign")
-        ).add_to(m)
+        # Add markers if requested
+        if add_markers and tangent_coords:
+            # Start marker
+            folium.Marker(
+                location=tangent_coords[0],
+                tooltip=f"Tangent Start",
+                icon=folium.Icon(color="blue", icon="info-sign")
+            ).add_to(m)
+            
+            # End marker
+            folium.Marker(
+                location=tangent_coords[-1],
+                tooltip=f"Tangent End",
+                icon=folium.Icon(color="green", icon="info-sign")
+            ).add_to(m)
     
     return tangent_coords 

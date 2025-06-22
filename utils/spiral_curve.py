@@ -198,7 +198,7 @@ def add_railway_spiral_to_map(m, start_point, bearing_deg, spiral_length_ft,
     Add a railway spiral curve directly to a Folium map.
     
     Args:
-        m: Folium map object
+        m: Folium map object (can be None to just calculate coordinates without adding to map)
         start_point: Tuple (lat, lon) for the start of the spiral (TS point)
         bearing_deg: Initial bearing in degrees (0=North, 90=East)
         spiral_length_ft: Length of the spiral in feet (Ls)
@@ -228,29 +228,30 @@ def add_railway_spiral_to_map(m, start_point, bearing_deg, spiral_length_ft,
 
     #print(f"spiral_coords -1: {spiral_coords[-1]}, spiral_coords 0: {spiral_coords[0]}")
     
-    # Add the spiral to the map
-    folium.PolyLine(
-        locations=spiral_coords,
-        color=color,
-        weight=weight,
-        opacity=opacity,
-        tooltip=tooltip or f"Spiral Curve: {spiral_length_ft} ft, {direction} turn"
-    ).add_to(m)
-    
-    # Add markers if requested
-    if add_markers:
-        # Start marker
-        folium.Marker(
-            location=spiral_coords[0],
-            tooltip=f"Spiral Start: {start_point}",
-            icon=folium.Icon(color="blue", icon="info-sign")
+    # Add the spiral to the map if m is not None
+    if m is not None:
+        folium.PolyLine(
+            locations=spiral_coords,
+            color=color,
+            weight=weight,
+            opacity=opacity,
+            tooltip=tooltip or f"Spiral Curve: {spiral_length_ft} ft, {direction} turn"
         ).add_to(m)
         
-        # End marker
-        folium.Marker(
-            location=spiral_coords[-1],
-            tooltip=f"Spiral End",
-            icon=folium.Icon(color="green", icon="info-sign")
-        ).add_to(m)
+        # Add markers if requested
+        if add_markers:
+            # Start marker
+            folium.Marker(
+                location=spiral_coords[0],
+                tooltip=f"Spiral Start: {start_point}",
+                icon=folium.Icon(color="blue", icon="info-sign")
+            ).add_to(m)
+            
+            # End marker
+            folium.Marker(
+                location=spiral_coords[-1],
+                tooltip=f"Spiral End",
+                icon=folium.Icon(color="green", icon="info-sign")
+            ).add_to(m)
     
     return spiral_coords 

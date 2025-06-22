@@ -373,7 +373,16 @@ class RailwayAlignment:
         
         # Find coordinates within the station range
         coords = []
-        current_station = 0
+        
+        # Start at the first segment's starting station instead of 0
+        if self.segments:
+            alignment_start_station = self.segments[0].start_station_value
+            current_station = alignment_start_station
+            
+            # Debug print to help diagnose issues
+            # print(f"Alignment starts at {alignment_start_station}, looking for section from {start_station_value} to {end_station_value}")
+        else:
+            current_station = 0
         
         for i, segment in enumerate(self.segments):
             segment_start_station = current_station
@@ -384,6 +393,9 @@ class RailwayAlignment:
                 segment_end_station = segment_start_station + segment.entry_spiral_length + segment.circular_arc_length + segment.exit_spiral_length
             else:
                 segment_end_station = segment_start_station  # Unknown segment type
+            
+            # Debug print for segment stations
+            # print(f"Segment {i}: {segment.name} from {segment_start_station} to {segment_end_station}")
                 
             # Check if this segment overlaps with our range
             if segment_end_station >= start_station_value and segment_start_station <= end_station_value:
@@ -392,22 +404,37 @@ class RailwayAlignment:
                 
                 if segment_start_station <= start_station_value <= segment_end_station:
                     # Start point is in this segment
-                    start_pct = (start_station_value - segment_start_station) / (segment_end_station - segment_start_station)
-                    start_idx = int(start_pct * (len(segment_coords) - 1))
+                    segment_length = segment_end_station - segment_start_station
+                    if segment_length > 0:  # Avoid division by zero
+                        start_pct = (start_station_value - segment_start_station) / segment_length
+                        start_idx = int(start_pct * (len(segment_coords) - 1))
+                    else:
+                        start_idx = 0
                 else:
                     # Start point is before this segment
                     start_idx = 0
                     
                 if segment_start_station <= end_station_value <= segment_end_station:
                     # End point is in this segment
-                    end_pct = (end_station_value - segment_start_station) / (segment_end_station - segment_start_station)
-                    end_idx = int(end_pct * (len(segment_coords) - 1)) + 1  # +1 to include the end point
+                    segment_length = segment_end_station - segment_start_station
+                    if segment_length > 0:  # Avoid division by zero
+                        end_pct = (end_station_value - segment_start_station) / segment_length
+                        end_idx = int(end_pct * (len(segment_coords) - 1)) + 1  # +1 to include the end point
+                    else:
+                        end_idx = len(segment_coords)
                 else:
                     # End point is after this segment
                     end_idx = len(segment_coords)
-                    
+                
+                # Ensure indices are within bounds
+                start_idx = max(0, min(start_idx, len(segment_coords) - 1))
+                end_idx = max(start_idx + 1, min(end_idx, len(segment_coords)))
+                
                 # Add the coordinates within the range
                 coords.extend(segment_coords[start_idx:end_idx])
+                
+                # Debug print for coordinates added
+                # print(f"Adding coords from segment {i} from index {start_idx} to {end_idx}, total: {len(segment_coords[start_idx:end_idx])}")
                 
             current_station = segment_end_station
             
@@ -466,8 +493,17 @@ class RailwayAlignment:
         
         return track_params
         
-    def add_to_map(self, m, start_ref_point_name=None, track_params=None, start_station=None, add_markers=False):
-        """Add the entire alignment to the map"""
+    def add_to_map(self, m, start_ref_point_name=None, track_params=None, start_station=None, add_markers=False, hide_technical_info=False):
+        """Add the entire alignment to the map
+        
+        Args:
+            m: Folium map object
+            start_ref_point_name: Name of the reference point to start from
+            track_params: Track parameters from calculate_track_params
+            start_station: Starting station value (optional)
+            add_markers: Whether to add markers for reference points
+            hide_technical_info: Whether to hide technical information about tangents and curves
+        """
         if not self.segments:
             raise ValueError("No segments added to alignment")
             
@@ -500,19 +536,89 @@ class RailwayAlignment:
             
             if not current_point:
                 raise ValueError("No start point provided for the alignment")
+        
+        # If we're hiding technical info, add a simple line for the entire alignment
+        if hide_technical_info:
+            # Process each segment to collect coordinates without adding to map
+            self.segment_coords = []
+            self.all_coords = []
+            
+            for segment in self.segments:
+                # Calculate the segment's coordinates without adding to map
+                if segment.type == "tangent":
+                    # For tangents, use add_railway_tangent_to_map but don't add to map
+                    from utils.tangent_line import add_railway_tangent_to_map
+                    segment_coords = add_railway_tangent_to_map(
+                        m=None,  # Don't add to map
+                        start_point=current_point,
+                        bearing_deg=current_bearing if segment.manual_bearing is None else segment.manual_bearing,
+                        length_ft=segment.length_ft,
+                        num_points=20
+                    )
+                    segment.coords = segment_coords
+                    
+                    # Update current_point and current_bearing for next segment
+                    current_point = segment_coords[-1]
+                    current_bearing = current_bearing if segment.manual_bearing is None else segment.manual_bearing
+                    
+                elif segment.type == "spiral_curve_spiral":
+                    # For curves, use add_complete_railway_curve_to_map but don't add to map
+                    from utils.railway_curve import add_complete_railway_curve_to_map
+                    curve_result = add_complete_railway_curve_to_map(
+                        m=None,  # Don't add to map
+                        ts_point=current_point,
+                        ts_bearing_deg=current_bearing,
+                        entry_spiral_length_ft=segment.entry_spiral_length,
+                        circular_arc_length_ft=segment.circular_arc_length,
+                        exit_spiral_length_ft=segment.exit_spiral_length,
+                        radius_ft=segment.radius_ft,
+                        direction=segment.direction,
+                        add_markers=False
+                    )
+                    
+                    segment.coords = curve_result["all_coords"]
+                    
+                    # Update current_point and current_bearing for next segment
+                    current_point = curve_result["st_point"]
+                    
+                    # Calculate the final bearing
+                    if segment.direction == "right":
+                        entry_deflection = np.degrees((segment.entry_spiral_length**2) / (2 * segment.radius_ft * segment.entry_spiral_length))
+                        circular_deflection = np.degrees(segment.circular_arc_length / segment.radius_ft)
+                        exit_deflection = np.degrees((segment.exit_spiral_length**2) / (2 * segment.radius_ft * segment.exit_spiral_length))
+                        current_bearing = current_bearing - entry_deflection - circular_deflection - exit_deflection
+                    else:  # left
+                        entry_deflection = np.degrees((segment.entry_spiral_length**2) / (2 * segment.radius_ft * segment.entry_spiral_length))
+                        circular_deflection = np.degrees(segment.circular_arc_length / segment.radius_ft)
+                        exit_deflection = np.degrees((segment.exit_spiral_length**2) / (2 * segment.radius_ft * segment.exit_spiral_length))
+                        current_bearing = current_bearing + entry_deflection + circular_deflection + exit_deflection
                 
-        # Process each segment and add to the map
-        for segment in self.segments:
-            # Add segment to map and get the end point and bearing
-            end_point, end_bearing = segment.add_to_map(m, current_point, current_bearing)
+                # Add segment coordinates to the list
+                self.segment_coords.append(segment.coords)
+                self.all_coords.extend(segment.coords)
             
-            # Update current point and bearing for the next segment
-            current_point = end_point
-            current_bearing = end_bearing
+            # Add a single polyline for the entire alignment with a generic tooltip
+            folium.PolyLine(
+                locations=self.all_coords,
+                color=self.color,
+                weight=5,
+                opacity=0.7,
+                tooltip=self.name
+            ).add_to(m)
             
-            # Add segment coordinates to the list
-            self.segment_coords.append(segment.coords)
-            self.all_coords.extend(segment.coords)
+        else:
+            # Process each segment and add to the map with full technical details
+            for segment in self.segments:
+                # Add segment to map and get the end point and bearing
+                end_point, end_bearing = segment.add_to_map(m, current_point, current_bearing)
+                
+                # Update current point and bearing for the next segment
+                current_point = end_point
+                current_bearing = end_bearing
+                
+                # Add segment coordinates to the list
+                self.segment_coords.append(segment.coords)
+                self.all_coords.extend(segment.coords)
             
         # Add markers for reference points if requested
         if add_markers:

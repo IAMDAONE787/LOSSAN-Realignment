@@ -26,7 +26,7 @@ def add_complete_railway_curve_to_map(
     Add a complete railway curve (spiral-curve-spiral) to a Folium map.
     
     Args:
-        m: Folium map object
+        m: Folium map object (can be None to just calculate coordinates without adding to map)
         ts_point: Tuple (lat, lon) for Tangent to Spiral (TS) point
         ts_bearing_deg: Initial bearing in degrees (0=North, 90=East)
         entry_spiral_length_ft: Length of the entry spiral in feet
@@ -82,7 +82,7 @@ def add_complete_railway_curve_to_map(
     )
     
     # Add white pattern if requested
-    if add_white_pattern:
+    if m is not None and add_white_pattern:
         folium.PolyLine(
             locations=entry_spiral_coords,
             color="#FFFFFF",
@@ -120,7 +120,7 @@ def add_complete_railway_curve_to_map(
     )
     
     # Add white pattern if requested
-    if add_white_pattern:
+    if m is not None and add_white_pattern:
         folium.PolyLine(
             locations=circular_curve_coords,
             color="#FFFFFF",
@@ -158,7 +158,7 @@ def add_complete_railway_curve_to_map(
     )
     
     # Add white pattern if requested
-    if add_white_pattern:
+    if m is not None and add_white_pattern:
         folium.PolyLine(
             locations=exit_spiral_coords,
             color="#FFFFFF",
@@ -172,7 +172,7 @@ def add_complete_railway_curve_to_map(
     st_point = exit_spiral_coords[-1]
     
     # Add markers for key points if requested
-    if add_markers:
+    if m is not None and add_markers:
         # TS marker
         folium.Marker(
             location=ts_point,

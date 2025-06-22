@@ -243,7 +243,7 @@ def add_railway_circular_curve_to_map(m, start_point, bearing_deg=None, end_poin
     Add a railway circular curve directly to a Folium map.
     
     Args:
-        m: Folium map object
+        m: Folium map object (can be None to just calculate coordinates without adding to map)
         start_point: Tuple (lat, lon) for the start of the curve
         bearing_deg: Initial bearing in degrees (0=North, 90=East) (optional)
         end_point: Tuple (lat, lon) for the end of the curve (optional)
@@ -262,64 +262,41 @@ def add_railway_circular_curve_to_map(m, start_point, bearing_deg=None, end_poin
         List of coordinate tuples (lat, lon) forming the circular curve
     """
     # Generate the circular curve points
-    if end_point is not None and (degree_of_curve is not None or radius_ft is not None):
-        # Endpoints mode
-        curve_coords = create_railway_circular_curve(
-            start_point=start_point,
-            end_point=end_point,
-            degree_of_curve=degree_of_curve,
-            radius_ft=radius_ft,
-            direction=direction,
-            steps=steps
-        )
-        mode = "endpoints"
-    elif bearing_deg is not None and arc_length_ft is not None and (degree_of_curve is not None or radius_ft is not None):
-        # Bearing mode
-        curve_coords = create_railway_circular_curve(
-            start_point=start_point,
-            bearing_deg=bearing_deg,
-            arc_length_ft=arc_length_ft,
-            degree_of_curve=degree_of_curve,
-            radius_ft=radius_ft,
-            direction=direction,
-            steps=steps
-        )
-        mode = "bearing"
-    else:
-        raise ValueError("Either (start_point, end_point, and degree_of_curve/radius_ft) or (start_point, bearing_deg, arc_length_ft, and degree_of_curve/radius_ft) must be provided")
+    curve_coords = create_railway_circular_curve(
+        start_point=start_point,
+        end_point=end_point,
+        bearing_deg=bearing_deg,
+        degree_of_curve=degree_of_curve,
+        arc_length_ft=arc_length_ft,
+        radius_ft=radius_ft,
+        direction=direction,
+        steps=steps
+    )
     
-    # Add the curve to the map
-    if radius_ft is None and degree_of_curve is not None:
-        radius_ft = 5729.58 / degree_of_curve
-        
-    curve_info = f"R={int(radius_ft)}ft"
-    if arc_length_ft:
-        curve_info += f", L={int(arc_length_ft)}ft"
-    if degree_of_curve:
-        curve_info += f", Dc={degree_of_curve:.2f}°"
-        
-    folium.PolyLine(
-        locations=curve_coords,
-        color=color,
-        weight=weight,
-        opacity=opacity,
-        tooltip=tooltip or f"Circular Curve: {curve_info}, {direction} turn"
-    ).add_to(m)
-    
-    # Add markers if requested
-    if add_markers:
-        # Start marker
-        folium.Marker(
-            location=curve_coords[0],
-            tooltip=f"Curve Start: {mode} mode",
-            icon=folium.Icon(color="blue", icon="info-sign")
+    # Add the curve to the map if m is not None
+    if m is not None:
+        folium.PolyLine(
+            locations=curve_coords,
+            color=color,
+            weight=weight,
+            opacity=opacity,
+            tooltip=tooltip or f"Circular Curve: {arc_length_ft} ft, {direction} turn"
         ).add_to(m)
         
-        # End marker
-        folium.Marker(
-            location=curve_coords[-1],
-            tooltip=f"Curve End",
-            icon=folium.Icon(color="green", icon="info-sign")
-        ).add_to(m)
+        # Add markers if requested
+        if add_markers:
+            # Start marker
+            folium.Marker(
+                location=curve_coords[0],
+                tooltip=f"Curve Start: {start_point}",
+                icon=folium.Icon(color="blue", icon="info-sign")
+            ).add_to(m)
+            
+            # End marker
+            folium.Marker(
+                location=curve_coords[-1],
+                tooltip=f"Curve End",
+                icon=folium.Icon(color="green", icon="info-sign")
+            ).add_to(m)
     
     return curve_coords 

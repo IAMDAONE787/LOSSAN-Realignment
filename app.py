@@ -143,6 +143,23 @@ with main_content:
                         key="northern_yellow_track_visible", 
                         on_change=lambda: st.session_state.track_visibility.update({"northern_yellow": st.session_state.northern_yellow_track_visible}))
 
+    # Add boring locations control
+    st.sidebar.subheader("Boring Locations")
+    
+    # Initialize boring visibility in session state if not present
+    if "boring_visibility" not in st.session_state:
+        st.session_state.boring_visibility = True
+    
+    # Add checkbox to toggle boring locations
+    st.sidebar.checkbox("Show Boring Locations", value=st.session_state.boring_visibility,
+                        key="boring_locations_visible",
+                        on_change=lambda: setattr(st.session_state, "boring_visibility", st.session_state.boring_locations_visible))
+    
+    # Add info about boring locations
+    with st.sidebar.expander("Boring Locations Info"):
+        st.write("These markers represent boring locations used for geological surveys along the proposed railway alignments.")
+        st.write("The 'R-' prefix indicates regular borings, while 'RC-' indicates rock core samples.")
+
     # Initialize session state for location if not present
     if "location" not in st.session_state:
         st.session_state["location"] = None
@@ -849,7 +866,8 @@ with main_content:
             m=m, 
             start_ref_point_name="STA_2000", 
             track_params=track_params,
-            add_markers=False  # Hide all pin points
+            add_markers=False,  # Hide all pin points
+            hide_technical_info=True  # Hide tangent/curve information
         )
         
         # Define track type sections for the Yellow alignment
@@ -919,7 +937,8 @@ with main_content:
             m=m,
             start_ref_point_name="STA_500",
             track_params=blue_track_params,
-            add_markers=False  # Hide all pin points
+            add_markers=False,  # Hide all pin points
+            hide_technical_info=True  # Hide tangent/curve information
         )
         
         # Define track type sections for the Blue alignment
@@ -996,7 +1015,8 @@ with main_content:
             m=m,
             start_ref_point_name="STA_500",
             track_params=purple_track_params,
-            add_markers=False  # Hide all pin points
+            add_markers=False,  # Hide all pin points
+            hide_technical_info=True  # Hide tangent/curve information
         )
         
         # Define track type sections for the Purple alignment
@@ -1097,7 +1117,8 @@ with main_content:
             m=m,
             start_ref_point_name="STA_500",
             track_params=green_track_params,
-            add_markers=False  # Hide all pin points
+            add_markers=False,  # Hide all pin points
+            hide_technical_info=True  # Hide tangent/curve information
         )
         
         # Define track type sections for the Green alignment
@@ -1166,7 +1187,8 @@ with main_content:
             m=m,
             start_ref_point_name="STA_2000",
             track_params=northern_yellow_track_params,
-            add_markers=False  # Hide all pin points
+            add_markers=False,  # Hide all pin points
+            hide_technical_info=True  # Hide tangent/curve information
         )
 
         northern_yellow_alignment.render_track_type_sections(m)
@@ -1195,7 +1217,7 @@ with main_content:
         Portal(
             name="Racetrack View Dr Portal",
             track_alignment=yellow_alignment,
-            station_value=8200,  # 82+00
+            station_value=7800,  # 82+00
             color="red",
             description="Northern portal of the Yellow Route tunnel at Racetrack View Drive"
         ),
@@ -1203,7 +1225,7 @@ with main_content:
         Portal(
             name="I-5 Knoll Portal",
             track_alignment=yellow_alignment,
-            station_value=parse_station("235+49.79"),  # TS station of the seventh curve
+            station_value=parse_station("234+00"),  # TS station of the seventh curve
             color="#B8860B",  # Dark goldenrod
             description="Southern portal of the Yellow Route tunnel at I-5 Knoll"
         )
@@ -1249,6 +1271,78 @@ with main_content:
             className="northern-yellow-route-overlay"  # Special class to allow hover
         ).add_to(m)
     
+    # Add boring location markers
+    boring_locations = [
+        {"name": "R-24-002", "latitude": 32.919826, "longitude": -117.239439},
+        {"name": "R-24-004", "latitude": 32.919798, "longitude": -117.241627},
+        {"name": "R-24-005B", "latitude": 32.93025, "longitude": -117.245635},
+        {"name": "R-24-008", "latitude": 32.970812, "longitude": -117.266118},
+        {"name": "RC-24-11", "latitude": 32.965970, "longitude": -117.264261},
+        {"name": "RC-24-12", "latitude": 32.967189, "longitude": -117.265276},
+        {"name": "RC-24-13", "latitude": 32.939822, "longitude": -117.260618},
+        {"name": "RC-24-14", "latitude": 32.933054, "longitude": -117.246391},
+        {"name": "RC-24-15", "latitude": 32.926628, "longitude": -117.241601},
+        {"name": "RC-24-16", "latitude": 32.947879, "longitude": -117.261747},
+        {"name": "RC-24-17", "latitude": 32.951342, "longitude": -117.255873},
+        {"name": "RC-24-18", "latitude": 32.954228, "longitude": -117.262734},
+        {"name": "RC-24-30", "latitude": 32.980163, "longitude": -117.268140},
+        {"name": "RC-24-31", "latitude": 32.973985, "longitude": -117.265193},
+        {"name": "RC-24-32", "latitude": 32.969438, "longitude": -117.261282},
+        {"name": "RC-24-33", "latitude": 32.969282, "longitude": -117.258178},
+        {"name": "RC-24-34", "latitude": 32.967745, "longitude": -117.259878},
+        {"name": "RC-24-35", "latitude": 32.967481, "longitude": -117.260000},
+        {"name": "RC-24-36", "latitude": 32.963180, "longitude": -117.260000},
+        {"name": "RC-24-37", "latitude": 32.961115, "longitude": -117.260000},
+        {"name": "RC-24-38", "latitude": 32.951487, "longitude": -117.260000},
+        {"name": "RC-24-38 (Alternate)", "latitude": 32.945097, "longitude": -117.260000},
+        {"name": "RC-24-39", "latitude": 32.938215, "longitude": -117.260000}
+    ]
+    
+    # Create a feature group for boring markers so they can be toggled as a group
+    boring_markers = folium.FeatureGroup(name="Boring Locations")
+    
+    # Add each boring marker to the map if boring visibility is enabled
+    if st.session_state.boring_visibility:
+        for boring in boring_locations:
+            # Create a custom icon for boring markers
+            boring_icon = folium.DivIcon(
+                icon_size=(20, 20),
+                icon_anchor=(10, 10),
+                html=f"""
+                <div style="
+                    background-color: #4B0082;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 6px;
+                    border: 2px solid white;
+                    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+                "></div>
+                """
+            )
+            
+            # Add marker to the feature group
+            folium.Marker(
+                location=[boring["latitude"], boring["longitude"]],
+                tooltip=boring["name"],
+                popup=folium.Popup(
+                    f"""
+                    <div style="min-width: 150px; text-align: center;">
+                        <h4>{boring["name"]}</h4>
+                        <p>Latitude: {boring["latitude"]}<br>
+                        Longitude: {boring["longitude"]}</p>
+                    </div>
+                    """,
+                    max_width=300
+                ),
+                icon=boring_icon
+            ).add_to(boring_markers)
+    
+    # Add the feature group to the map
+    boring_markers.add_to(m)
+    
+    # Add a control to toggle boring markers
+    folium.LayerControl().add_to(m)
+                
     # if we have a valid location, plot it + compute distances
     if location:
         addr_pt = (location.latitude, location.longitude)
@@ -1458,6 +1552,43 @@ with main_content:
                     northern_yellow_closest_segment = segment
                     northern_yellow_segment_index = i
         
+        # Calculate distance to each boring location if they're visible
+        if st.session_state.boring_visibility and boring_locations:
+            st.sidebar.markdown("## Closest Boring Location")
+            
+            # Find the closest boring location
+            closest_boring = None
+            closest_boring_dist = float('inf')
+            
+            for boring in boring_locations:
+                boring_point = (boring["latitude"], boring["longitude"])
+                dist = geodesic(addr_pt, boring_point).meters
+                
+                if dist < closest_boring_dist:
+                    closest_boring_dist = dist
+                    closest_boring = boring
+            
+            if closest_boring:
+                # Convert to different units
+                closest_boring_dist_ft = round(closest_boring_dist * 3.28084)  # Convert meters to feet
+                closest_boring_dist_m_rounded = round(closest_boring_dist / 10) * 10  # Round to nearest 10 meters
+                closest_boring_dist_km = round(closest_boring_dist / 1000, 1)  # Round to 0.1 km
+                closest_boring_dist_miles = round(closest_boring_dist * 0.000621371, 1)  # Round to 0.1 miles
+                
+                # Draw a connector to the closest boring location
+                folium.PolyLine(
+                    [addr_pt, (closest_boring["latitude"], closest_boring["longitude"])],
+                    color="purple",
+                    weight=2,
+                    dash_array="5,5"
+                ).add_to(m)
+                
+                # Display the closest boring location
+                st.sidebar.write(f"**{closest_boring['name']}**")
+                st.sidebar.write(f"- {closest_boring_dist_ft} ft")
+                st.sidebar.write(f"- {closest_boring_dist_m_rounded} m")
+                st.sidebar.write(f"- {closest_boring_dist_km} km")
+                st.sidebar.write(f"- {closest_boring_dist_miles} mi")
 
     # --- 4. render ---
     # Set the map height to fill available space while leaving room for header and footer
