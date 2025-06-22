@@ -1367,10 +1367,8 @@ with main_content:
             dist_m = geodesic(addr_pt, (nearest_lat, nearest_lon)).meters
             
             # Convert to different units and round
-            dist_ft = round(dist_m * 3.28084)  # Convert meters to feet
+            dist_ft = round(dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
             dist_m_rounded = round(dist_m / 10) * 10  # Round to nearest 10 meters
-            dist_km = round(dist_m / 1000, 1)  # Round to 0.1 km
-            dist_miles = round(dist_m * 0.000621371, 1)  # Round to 0.1 miles
 
             # draw a connector
             folium.PolyLine(
@@ -1383,8 +1381,6 @@ with main_content:
             st.sidebar.write(f"**{name}:**")
             st.sidebar.write(f"- {dist_ft} ft")
             st.sidebar.write(f"- {dist_m_rounded} m")
-            st.sidebar.write(f"- {dist_km} km")
-            st.sidebar.write(f"- {dist_miles} mi")
             
         # Calculate distance to yellow track
         if st.session_state.track_visibility["yellow"] and yellow_alignment.all_coords:
@@ -1394,10 +1390,8 @@ with main_content:
             yellow_dist_m = geodesic(addr_pt, (yellow_nearest_lat, yellow_nearest_lon)).meters
             
             # Convert to different units and round
-            yellow_dist_ft = round(yellow_dist_m * 3.28084)  # Convert meters to feet
+            yellow_dist_ft = round(yellow_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
             yellow_dist_m_rounded = round(yellow_dist_m / 10) * 10  # Round to nearest 10 meters
-            yellow_dist_km = round(yellow_dist_m / 1000, 1)  # Round to 0.1 km
-            yellow_dist_miles = round(yellow_dist_m * 0.000621371, 1)  # Round to 0.1 miles
             
             # Draw a connector
             folium.PolyLine(
@@ -1411,8 +1405,6 @@ with main_content:
             st.sidebar.write("**Yellow Route: Engineering Alignment:**")
             st.sidebar.write(f"- {yellow_dist_ft} ft")
             st.sidebar.write(f"- {yellow_dist_m_rounded} m")
-            st.sidebar.write(f"- {yellow_dist_km} km")
-            st.sidebar.write(f"- {yellow_dist_miles} mi")
         
         # Calculate distance to blue track
         if st.session_state.track_visibility["blue"] and blue_alignment.all_coords:
@@ -1422,10 +1414,8 @@ with main_content:
             blue_dist_m = geodesic(addr_pt, (blue_nearest_lat, blue_nearest_lon)).meters
             
             # Convert to different units and round
-            blue_dist_ft = round(blue_dist_m * 3.28084)  # Convert meters to feet
+            blue_dist_ft = round(blue_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
             blue_dist_m_rounded = round(blue_dist_m / 10) * 10  # Round to nearest 10 meters
-            blue_dist_km = round(blue_dist_m / 1000, 1)  # Round to 0.1 km
-            blue_dist_miles = round(blue_dist_m * 0.000621371, 1)  # Round to 0.1 miles
             
             # Draw a connector
             folium.PolyLine(
@@ -1439,8 +1429,6 @@ with main_content:
             st.sidebar.write("**Blue Route: Under Crest Canyon:**")
             st.sidebar.write(f"- {blue_dist_ft} ft")
             st.sidebar.write(f"- {blue_dist_m_rounded} m")
-            st.sidebar.write(f"- {blue_dist_km} km")
-            st.sidebar.write(f"- {blue_dist_miles} mi")
         
         # Calculate distance to purple track
         if st.session_state.track_visibility["purple"] and purple_alignment.all_coords:
@@ -1450,10 +1438,8 @@ with main_content:
             purple_dist_m = geodesic(addr_pt, (purple_nearest_lat, purple_nearest_lon)).meters
             
             # Convert to different units and round
-            purple_dist_ft = round(purple_dist_m * 3.28084)  # Convert meters to feet
+            purple_dist_ft = round(purple_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
             purple_dist_m_rounded = round(purple_dist_m / 10) * 10  # Round to nearest 10 meters
-            purple_dist_km = round(purple_dist_m / 1000, 1)  # Round to 0.1 km
-            purple_dist_miles = round(purple_dist_m * 0.000621371, 1)  # Round to 0.1 miles
             
             # Draw a connector
             folium.PolyLine(
@@ -1467,8 +1453,6 @@ with main_content:
             st.sidebar.write("**Purple Route: Under Camino Del Mar:**")
             st.sidebar.write(f"- {purple_dist_ft} ft")
             st.sidebar.write(f"- {purple_dist_m_rounded} m")
-            st.sidebar.write(f"- {purple_dist_km} km")
-            st.sidebar.write(f"- {purple_dist_miles} mi")
         
         # Calculate distance to green track
         if st.session_state.track_visibility["green"] and green_alignment.all_coords:
@@ -1478,10 +1462,8 @@ with main_content:
             green_dist_m = geodesic(addr_pt, (green_nearest_lat, green_nearest_lon)).meters
             
             # Convert to different units and round
-            green_dist_ft = round(green_dist_m * 3.28084)  # Convert meters to feet
+            green_dist_ft = round(green_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
             green_dist_m_rounded = round(green_dist_m / 10) * 10  # Round to nearest 10 meters
-            green_dist_km = round(green_dist_m / 1000, 1)  # Round to 0.1 km
-            green_dist_miles = round(green_dist_m * 0.000621371, 1)  # Round to 0.1 miles
             
             # Draw a connector
             folium.PolyLine(
@@ -1495,8 +1477,6 @@ with main_content:
             st.sidebar.write("**Green Route: Del Mar Bluffs Double-Track:**")
             st.sidebar.write(f"- {green_dist_ft} ft")
             st.sidebar.write(f"- {green_dist_m_rounded} m")
-            st.sidebar.write(f"- {green_dist_km} km")
-            st.sidebar.write(f"- {green_dist_miles} mi")
         
         # Calculate distance to Northern Yellow track
         if st.session_state.track_visibility["northern_yellow"] and northern_yellow_alignment.all_coords:
@@ -1506,10 +1486,8 @@ with main_content:
             northern_yellow_dist_m = geodesic(addr_pt, (northern_yellow_nearest_lat, northern_yellow_nearest_lon)).meters
             
             # Convert to different units and round
-            northern_yellow_dist_ft = round(northern_yellow_dist_m * 3.28084)  # Convert meters to feet
+            northern_yellow_dist_ft = round(northern_yellow_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
             northern_yellow_dist_m_rounded = round(northern_yellow_dist_m / 10) * 10  # Round to nearest 10 meters
-            northern_yellow_dist_km = round(northern_yellow_dist_m / 1000, 1)  # Round to 0.1 km
-            northern_yellow_dist_miles = round(northern_yellow_dist_m * 0.000621371, 1)  # Round to 0.1 miles
             
             # Draw a connector
             folium.PolyLine(
@@ -1523,8 +1501,6 @@ with main_content:
             st.sidebar.write("**Northern Yellow Route:**")
             st.sidebar.write(f"- {northern_yellow_dist_ft} ft")
             st.sidebar.write(f"- {northern_yellow_dist_m_rounded} m")
-            st.sidebar.write(f"- {northern_yellow_dist_km} km")
-            st.sidebar.write(f"- {northern_yellow_dist_miles} mi")
             
             # Find which segment of the northern yellow track is closest
             northern_yellow_min_distance = float('inf')
@@ -1559,10 +1535,8 @@ with main_content:
             
             if closest_boring:
                 # Convert to different units
-                closest_boring_dist_ft = round(closest_boring_dist * 3.28084)  # Convert meters to feet
+                closest_boring_dist_ft = round(closest_boring_dist * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
                 closest_boring_dist_m_rounded = round(closest_boring_dist / 10) * 10  # Round to nearest 10 meters
-                closest_boring_dist_km = round(closest_boring_dist / 1000, 1)  # Round to 0.1 km
-                closest_boring_dist_miles = round(closest_boring_dist * 0.000621371, 1)  # Round to 0.1 miles
                 
                 # Draw a connector to the closest boring location
                 folium.PolyLine(
@@ -1576,8 +1550,6 @@ with main_content:
                 st.sidebar.write(f"**{closest_boring['name']}**")
                 st.sidebar.write(f"- {closest_boring_dist_ft} ft")
                 st.sidebar.write(f"- {closest_boring_dist_m_rounded} m")
-                st.sidebar.write(f"- {closest_boring_dist_km} km")
-                st.sidebar.write(f"- {closest_boring_dist_miles} mi")
 
     # --- 4. render ---
     # Set the map height to fill available space while leaving room for header and footer
