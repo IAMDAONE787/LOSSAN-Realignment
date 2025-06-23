@@ -59,9 +59,6 @@ class Portal:
         """Add the portal marker to the map"""
         if not self.coordinates:
             self.calculate_coordinates()
-            
-        # Print coordinates for debugging
-        print(f"{self.name} coordinates: {self.coordinates}")
         
         # Define custom icon for the portal
         portal_icon = folium.DivIcon(

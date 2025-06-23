@@ -16,8 +16,6 @@ def calculate_track_parameters(point1, station1, point2, station2):
         Dictionary with track bearing, scale, and direction vector
     """
     
-    #print(f"point1: {point1}, station1: {station1}, point2: {point2}, station2: {station2}")
-    
     # Convert points to numpy arrays
     p1 = np.array(point1)
     p2 = np.array(point2)
@@ -38,10 +36,6 @@ def calculate_track_parameters(point1, station1, point2, station2):
     
     # Normalize direction vector
     direction = vector / np.linalg.norm(vector)
-
-    #print(f"gis_distance: {gis_distance}, station_distance: {station_distance}")
-
-    #print(f"bearing_rad: {bearing_rad}, bearing_deg: {bearing_deg}, scale: {scale}, direction: {direction}")
     
     return {
         'bearing_rad': bearing_rad,

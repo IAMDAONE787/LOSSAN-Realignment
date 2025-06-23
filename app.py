@@ -78,6 +78,23 @@ st.markdown(
     .folium-map .leaflet-pane path:not(.yellow-bridge-overlay) {
         pointer-events: none !important;
     }
+    /* Style for instructions */
+    .instruction-box {
+        background-color: #e6f2ff;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 5px solid #4b92e5;
+        margin-bottom: 20px;
+    }
+    .instruction-box h3 {
+        color: #1e3a8a;
+        margin-bottom: 15px;
+    }
+    .instruction-box h4 {
+        color: #2c5282;
+        margin-top: 15px;
+        margin-bottom: 10px;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -89,6 +106,23 @@ st.title("LOSSAN Rail Realignment Explorer")
 main_content = st.container()
 
 with main_content:
+    # Add instructions to the main page
+    # Create a container with the custom class and all content in a single markdown call
+    st.markdown("""
+    <div class="instruction-box">
+        <h3>How to Use the Interactive Map</h3>
+        
+        Search Your Address:
+        Enter your home address in the search bar and click "Search." The map will display the shortest distance from your location to each proposed rail realignment route and the nearest boring site.
+        
+        Explore Infrastructure Details:
+        Hover over each alignment line to view detailed infrastructure components—such as portals, bored tunnels, cut-and-cover sections, trenches, and U-structures. Hover on pins to view boring locations for geotechnical and geological data collection.
+        
+        Customize the View:
+        Use the checkboxes to toggle individual alignments and boring locations on or off, depending on what you'd like to explore.
+    </div>
+    """, unsafe_allow_html=True)
+    
     # --- 1. define your four alignments (lat, lon) lists here ---
     # Green track will now be an engineering track, so we'll remove it from ALIGNMENTS
     ALIGNMENTS = {}
@@ -97,10 +131,17 @@ with main_content:
     st.sidebar.subheader("Search Location")
     
     # Simple text input for address without autocomplete
-    address_input = st.sidebar.text_input("Enter address", value=st.session_state.get("address", ""))
+    address_input = st.sidebar.text_input("Enter address", value=st.session_state.get("address", ""), key="address_input")
     
-    # Track visibility options
-    st.sidebar.subheader("Track Visibility")
+    # Check if Enter key was pressed (when the text input value changes)
+    if "address_input" in st.session_state and "previous_address" not in st.session_state:
+        st.session_state.previous_address = ""
+        
+    enter_pressed = False
+    if "address_input" in st.session_state and "previous_address" in st.session_state:
+        if st.session_state.address_input != st.session_state.previous_address and st.session_state.address_input:
+            enter_pressed = True
+        st.session_state.previous_address = st.session_state.address_input
     
     # Initialize session state for track visibility if not present
     if "track_visibility" not in st.session_state:
@@ -120,7 +161,12 @@ with main_content:
         st.sidebar.warning("Please enable at least one track before searching")
         search = False
     else:
-        search = st.sidebar.button("Search")
+        # Trigger search either by button or Enter key
+        button_search = st.sidebar.button("Search")
+        search = button_search or enter_pressed
+    
+    # Track visibility options
+    st.sidebar.subheader("Track Visibility")
     
     # Create toggle options for each track
     st.sidebar.checkbox("Yellow Track", value=st.session_state.track_visibility["yellow"], 
@@ -1566,8 +1612,9 @@ with footer_cols[0]:
     """)
 with footer_cols[1]:
     st.markdown("""
-    **Created by:** Nathan Qiu  
-    **Contact:** [nathanqiu07@gmail.com](mailto:nathanqiu07@gmail.com)
+    **Created by:** Nathan Q. \\
+    **Contact:** [lossanrealignment@gmail.com](mailto:lossanrealignment@gmail.com) \\
+    **For Questions Regarding the Alignments Contact:** Coalition for Safter Trains
     """)
     
 st.markdown("</div>", unsafe_allow_html=True)

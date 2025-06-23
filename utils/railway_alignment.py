@@ -378,9 +378,7 @@ class RailwayAlignment:
         if self.segments:
             alignment_start_station = self.segments[0].start_station_value
             current_station = alignment_start_station
-            
-            # Debug print to help diagnose issues
-            # print(f"Alignment starts at {alignment_start_station}, looking for section from {start_station_value} to {end_station_value}")
+        
         else:
             current_station = 0
         
@@ -393,9 +391,6 @@ class RailwayAlignment:
                 segment_end_station = segment_start_station + segment.entry_spiral_length + segment.circular_arc_length + segment.exit_spiral_length
             else:
                 segment_end_station = segment_start_station  # Unknown segment type
-            
-            # Debug print for segment stations
-            # print(f"Segment {i}: {segment.name} from {segment_start_station} to {segment_end_station}")
                 
             # Check if this segment overlaps with our range
             if segment_end_station >= start_station_value and segment_start_station <= end_station_value:
@@ -432,9 +427,6 @@ class RailwayAlignment:
                 
                 # Add the coordinates within the range
                 coords.extend(segment_coords[start_idx:end_idx])
-                
-                # Debug print for coordinates added
-                # print(f"Adding coords from segment {i} from index {start_idx} to {end_idx}, total: {len(segment_coords[start_idx:end_idx])}")
                 
             current_station = segment_end_station
             
