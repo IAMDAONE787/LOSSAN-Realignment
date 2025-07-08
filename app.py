@@ -4,6 +4,7 @@ import folium
 from streamlit_folium import st_folium
 from geopy.distance import geodesic
 import numpy as np
+import pandas as pd
 from folium.plugins import AntPath
 from utils import create_curved_path, create_circular_curve, create_spiral_curve
 from utils.engineering_coords import (
@@ -64,9 +65,14 @@ st.markdown(
     [data-testid="stAppViewBlockContainer"] {
         padding-bottom: 60px;
     }
+    /* Make sidebar wider to fit table contents but not too wide */
+    [data-testid="stSidebar"] {
+        min-width: 380px !important;
+        max-width: 380px !important;
+    }
     /* Adjust for sidebar */
     [data-testid="stSidebar"][aria-expanded="true"] ~ div .custom-footer {
-        left: var(--sidebar-width, 22rem);
+        left: var(--sidebar-width, 380px);
     }
     [data-testid="stSidebar"][aria-expanded="false"] ~ div .custom-footer {
         left: 0;
@@ -85,15 +91,28 @@ st.markdown(
         border-radius: 10px;
         border-left: 5px solid #4b92e5;
         margin-bottom: 20px;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: normal;
+        overflow-x: hidden;
+        max-width: 100%;
+        display: block;
     }
     .instruction-box h3 {
         color: #1e3a8a;
         margin-bottom: 15px;
+        font-size: 1.3em;
     }
-    .instruction-box h4 {
+    .instruction-box p {
+        margin-bottom: 15px;
+        width: 100%;
+        display: block;
+    }
+    .instruction-box strong {
+        display: block;
+        margin-bottom: 5px;
         color: #2c5282;
-        margin-top: 15px;
-        margin-bottom: 10px;
     }
     </style>
     """,
@@ -106,11 +125,11 @@ st.title("LOSSAN Rail Realignment Explorer")
 main_content = st.container()
 
 with main_content:
-    # Add instructions to the main page
-    # Create a container with the custom class and all content in a single markdown call
+    # Add instructions to the main page using a blue box
     st.markdown("""
-    <div class="instruction-box">
-        <h3>How to Use the Interactive Map</h3>
+    <div style="background-color: #e6f2ff; padding: 20px; border-radius: 10px; border-left: 5px solid #4b92e5; 
+         margin-bottom: 20px; border: 2px solid #4b92e5; box-shadow: 0 0 10px rgba(75, 146, 229, 0.3);">
+        <h2>How to Use the Interactive Map</h2>
         
         Search Your Address:
         Enter your home address in the search bar and click "Search." The map will display the shortest distance from your location to each proposed rail realignment route and the nearest boring site.
@@ -1387,6 +1406,14 @@ with main_content:
         pt = Point(location.longitude, location.latitude)
 
         st.sidebar.markdown("## Distances to Each Alignment")
+        
+        # Create dictionary to store all route distances
+        distance_data = {
+            "Route": [],
+            "Feet": [],
+            "Meters": []
+        }
+        
         for name, data in expanded_alignments.items():
             # Skip if the track is not visible
             track_name = name.lower().split()[0]  # Extract first word (yellow, blue, etc.)
@@ -1412,9 +1439,9 @@ with main_content:
             # geodesic distance in meters
             dist_m = geodesic(addr_pt, (nearest_lat, nearest_lon)).meters
             
-            # Convert to different units and round
-            dist_ft = round(dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
-            dist_m_rounded = round(dist_m / 10) * 10  # Round to nearest 10 meters
+            # Convert to different units and round (ensure integers)
+            dist_ft = int(round(dist_m * 3.28084 / 10) * 10)  # Convert meters to feet and round to nearest 10 feet
+            dist_m_rounded = int(round(dist_m / 10) * 10)  # Round to nearest 10 meters
 
             # draw a connector
             folium.PolyLine(
@@ -1423,10 +1450,25 @@ with main_content:
                 weight=2,
                 dash_array="5,5"
             ).add_to(m)
-
-            st.sidebar.write(f"**{name}:**")
-            st.sidebar.write(f"- {dist_ft} ft")
-            st.sidebar.write(f"- {dist_m_rounded} m")
+            
+            # Get simplified route name
+            if "Yellow" in name and "Northern" not in name:
+                simple_name = "Yellow Route"
+            elif "Blue" in name:
+                simple_name = "Blue Route"
+            elif "Purple" in name:
+                simple_name = "Purple Route"
+            elif "Green" in name:
+                simple_name = "Green Route"
+            elif "Northern Yellow" in name:
+                simple_name = "Northern Yellow Route"
+            else:
+                simple_name = name
+                
+            # Add to distance data dictionary
+            distance_data["Route"].append(simple_name)
+            distance_data["Feet"].append(f"{dist_ft}")
+            distance_data["Meters"].append(f"{dist_m_rounded}")
             
         # Calculate distance to yellow track
         if st.session_state.track_visibility["yellow"] and yellow_alignment.all_coords:
@@ -1435,9 +1477,9 @@ with main_content:
             yellow_nearest_lat, yellow_nearest_lon = yellow_nearest.y, yellow_nearest.x
             yellow_dist_m = geodesic(addr_pt, (yellow_nearest_lat, yellow_nearest_lon)).meters
             
-            # Convert to different units and round
-            yellow_dist_ft = round(yellow_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
-            yellow_dist_m_rounded = round(yellow_dist_m / 10) * 10  # Round to nearest 10 meters
+            # Convert to different units and round (ensure integers)
+            yellow_dist_ft = int(round(yellow_dist_m * 3.28084 / 10) * 10)  # Convert meters to feet and round to nearest 10 feet
+            yellow_dist_m_rounded = int(round(yellow_dist_m / 10) * 10)  # Round to nearest 10 meters
             
             # Draw a connector
             folium.PolyLine(
@@ -1447,10 +1489,10 @@ with main_content:
                 dash_array="5,5"
             ).add_to(m)
             
-            # Display the distance to Yellow track
-            st.sidebar.write("**Yellow Route: Engineering Alignment:**")
-            st.sidebar.write(f"- {yellow_dist_ft} ft")
-            st.sidebar.write(f"- {yellow_dist_m_rounded} m")
+            # Add to distance data dictionary
+            distance_data["Route"].append("Yellow Route")
+            distance_data["Feet"].append(str(yellow_dist_ft))
+            distance_data["Meters"].append(str(yellow_dist_m_rounded))
         
         # Calculate distance to blue track
         if st.session_state.track_visibility["blue"] and blue_alignment.all_coords:
@@ -1459,9 +1501,9 @@ with main_content:
             blue_nearest_lat, blue_nearest_lon = blue_nearest.y, blue_nearest.x
             blue_dist_m = geodesic(addr_pt, (blue_nearest_lat, blue_nearest_lon)).meters
             
-            # Convert to different units and round
-            blue_dist_ft = round(blue_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
-            blue_dist_m_rounded = round(blue_dist_m / 10) * 10  # Round to nearest 10 meters
+            # Convert to different units and round (ensure integers)
+            blue_dist_ft = int(round(blue_dist_m * 3.28084 / 10) * 10)  # Convert meters to feet and round to nearest 10 feet
+            blue_dist_m_rounded = int(round(blue_dist_m / 10) * 10)  # Round to nearest 10 meters
             
             # Draw a connector
             folium.PolyLine(
@@ -1471,10 +1513,10 @@ with main_content:
                 dash_array="5,5"
             ).add_to(m)
             
-            # Display the distance to Blue track
-            st.sidebar.write("**Blue Route: Under Crest Canyon:**")
-            st.sidebar.write(f"- {blue_dist_ft} ft")
-            st.sidebar.write(f"- {blue_dist_m_rounded} m")
+            # Add to distance data dictionary
+            distance_data["Route"].append("Blue Route")
+            distance_data["Feet"].append(str(blue_dist_ft))
+            distance_data["Meters"].append(str(blue_dist_m_rounded))
         
         # Calculate distance to purple track
         if st.session_state.track_visibility["purple"] and purple_alignment.all_coords:
@@ -1483,9 +1525,9 @@ with main_content:
             purple_nearest_lat, purple_nearest_lon = purple_nearest.y, purple_nearest.x
             purple_dist_m = geodesic(addr_pt, (purple_nearest_lat, purple_nearest_lon)).meters
             
-            # Convert to different units and round
-            purple_dist_ft = round(purple_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
-            purple_dist_m_rounded = round(purple_dist_m / 10) * 10  # Round to nearest 10 meters
+            # Convert to different units and round (ensure integers)
+            purple_dist_ft = int(round(purple_dist_m * 3.28084 / 10) * 10)  # Convert meters to feet and round to nearest 10 feet
+            purple_dist_m_rounded = int(round(purple_dist_m / 10) * 10)  # Round to nearest 10 meters
             
             # Draw a connector
             folium.PolyLine(
@@ -1495,10 +1537,10 @@ with main_content:
                 dash_array="5,5"
             ).add_to(m)
             
-            # Display the distance to Purple track
-            st.sidebar.write("**Purple Route: Under Camino Del Mar:**")
-            st.sidebar.write(f"- {purple_dist_ft} ft")
-            st.sidebar.write(f"- {purple_dist_m_rounded} m")
+            # Add to distance data dictionary
+            distance_data["Route"].append("Purple Route")
+            distance_data["Feet"].append(str(purple_dist_ft))
+            distance_data["Meters"].append(str(purple_dist_m_rounded))
         
         # Calculate distance to green track
         if st.session_state.track_visibility["green"] and green_alignment.all_coords:
@@ -1507,9 +1549,9 @@ with main_content:
             green_nearest_lat, green_nearest_lon = green_nearest.y, green_nearest.x
             green_dist_m = geodesic(addr_pt, (green_nearest_lat, green_nearest_lon)).meters
             
-            # Convert to different units and round
-            green_dist_ft = round(green_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
-            green_dist_m_rounded = round(green_dist_m / 10) * 10  # Round to nearest 10 meters
+            # Convert to different units and round (ensure integers)
+            green_dist_ft = int(round(green_dist_m * 3.28084 / 10) * 10)  # Convert meters to feet and round to nearest 10 feet
+            green_dist_m_rounded = int(round(green_dist_m / 10) * 10)  # Round to nearest 10 meters
             
             # Draw a connector
             folium.PolyLine(
@@ -1519,10 +1561,10 @@ with main_content:
                 dash_array="5,5"
             ).add_to(m)
             
-            # Display the distance to Green track
-            st.sidebar.write("**Green Route: Del Mar Bluffs Double-Track:**")
-            st.sidebar.write(f"- {green_dist_ft} ft")
-            st.sidebar.write(f"- {green_dist_m_rounded} m")
+            # Add to distance data dictionary
+            distance_data["Route"].append("Green Route")
+            distance_data["Feet"].append(str(green_dist_ft))
+            distance_data["Meters"].append(str(green_dist_m_rounded))
         
         # Calculate distance to Northern Yellow track
         if st.session_state.track_visibility["northern_yellow"] and northern_yellow_alignment.all_coords:
@@ -1531,9 +1573,9 @@ with main_content:
             northern_yellow_nearest_lat, northern_yellow_nearest_lon = northern_yellow_nearest.y, northern_yellow_nearest.x
             northern_yellow_dist_m = geodesic(addr_pt, (northern_yellow_nearest_lat, northern_yellow_nearest_lon)).meters
             
-            # Convert to different units and round
-            northern_yellow_dist_ft = round(northern_yellow_dist_m * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
-            northern_yellow_dist_m_rounded = round(northern_yellow_dist_m / 10) * 10  # Round to nearest 10 meters
+            # Convert to different units and round (ensure integers)
+            northern_yellow_dist_ft = int(round(northern_yellow_dist_m * 3.28084 / 10) * 10)  # Convert meters to feet and round to nearest 10 feet
+            northern_yellow_dist_m_rounded = int(round(northern_yellow_dist_m / 10) * 10)  # Round to nearest 10 meters
             
             # Draw a connector
             folium.PolyLine(
@@ -1543,10 +1585,10 @@ with main_content:
                 dash_array="5,5"
             ).add_to(m)
             
-            # Display the distance to Northern Yellow track
-            st.sidebar.write("**Northern Yellow Route:**")
-            st.sidebar.write(f"- {northern_yellow_dist_ft} ft")
-            st.sidebar.write(f"- {northern_yellow_dist_m_rounded} m")
+            # Add to distance data dictionary
+            distance_data["Route"].append("Northern Yellow Route")
+            distance_data["Feet"].append(str(northern_yellow_dist_ft))
+            distance_data["Meters"].append(str(northern_yellow_dist_m_rounded))
             
             # Find which segment of the northern yellow track is closest
             northern_yellow_min_distance = float('inf')
@@ -1565,7 +1607,6 @@ with main_content:
         
         # Calculate distance to each boring location if they're visible
         if st.session_state.boring_visibility and boring_locations:
-            st.sidebar.markdown("## Closest Boring Location")
             
             # Find the closest boring location
             closest_boring = None
@@ -1580,9 +1621,9 @@ with main_content:
                     closest_boring = boring
             
             if closest_boring:
-                # Convert to different units
-                closest_boring_dist_ft = round(closest_boring_dist * 3.28084 / 10) * 10  # Convert meters to feet and round to nearest 10 feet
-                closest_boring_dist_m_rounded = round(closest_boring_dist / 10) * 10  # Round to nearest 10 meters
+                # Convert to different units (ensure integers)
+                closest_boring_dist_ft = int(round(closest_boring_dist * 3.28084 / 10) * 10)  # Convert meters to feet and round to nearest 10 feet
+                closest_boring_dist_m_rounded = int(round(closest_boring_dist / 10) * 10)  # Round to nearest 10 meters
                 
                 # Draw a connector to the closest boring location
                 folium.PolyLine(
@@ -1592,10 +1633,74 @@ with main_content:
                     dash_array="5,5"
                 ).add_to(m)
                 
-                # Display the closest boring location
-                st.sidebar.write(f"**{closest_boring['name']}**")
-                st.sidebar.write(f"- {closest_boring_dist_ft} ft")
-                st.sidebar.write(f"- {closest_boring_dist_m_rounded} m")
+                # Add boring location to distance data
+                distance_data["Route"].append(f"Boring: {closest_boring['name']}")
+                distance_data["Feet"].append(str(closest_boring_dist_ft))
+                distance_data["Meters"].append(str(closest_boring_dist_m_rounded))
+                
+        # Display all distances in a table
+        if distance_data["Route"]:
+            # First, let's add custom CSS to control table column widths and prevent wrapping
+            st.markdown("""
+                <style>
+                    /* Make sure the table cells don't wrap text */
+                    .dataframe td, .dataframe th {
+                        white-space: nowrap !important;
+                        text-align: left !important;
+                        padding: 6px 8px !important;
+                        overflow: visible !important;
+                    }
+                    /* Set fixed widths for table columns */
+                    .dataframe {
+                        width: 100% !important;
+                        table-layout: fixed !important;
+                    }
+                    /* Adjust column widths */
+                    .dataframe th:nth-child(1), .dataframe td:nth-child(1) {
+                        width: 50% !important; /* Route name column */
+                        font-size: 13px !important;
+                    }
+                    .dataframe th:nth-child(2), .dataframe td:nth-child(2),
+                    .dataframe th:nth-child(3), .dataframe td:nth-child(3) {
+                        width: 25% !important; /* Numeric columns */
+                        text-align: right !important;
+                        font-size: 13px !important;
+                    }
+                    /* Fix the index column width */
+                    .dataframe th:first-child, .dataframe td:first-child {
+                        width: 25px !important;
+                        max-width: 25px !important;
+                        min-width: 25px !important;
+                        padding-left: 4px !important;
+                        padding-right: 2px !important;
+                    }
+                </style>
+            """, unsafe_allow_html=True)
+            
+            # Format all values consistently before display
+            formatted_data = {
+                "Route": distance_data["Route"].copy(),
+                "Feet": [],
+                "Meters": []
+            }
+            
+            # Format the feet and meters values to ensure they're integers
+            for i in range(len(distance_data["Route"])):
+                try:
+                    formatted_data["Feet"].append(int(distance_data["Feet"][i]))
+                    formatted_data["Meters"].append(int(distance_data["Meters"][i]))
+                except:
+                    formatted_data["Feet"].append(distance_data["Feet"][i])
+                    formatted_data["Meters"].append(distance_data["Meters"][i])
+            
+            # Create the DataFrame with consistent formatting
+            df = pd.DataFrame(formatted_data)
+            
+            # Display the table with right alignment for numeric columns
+            # First convert the numeric columns to strings with right alignment
+            df['Feet'] = df['Feet'].apply(lambda x: str(x))
+            df['Meters'] = df['Meters'].apply(lambda x: str(x))
+            st.sidebar.table(df)
 
     # --- 4. render ---
     # Set the map height to fill available space while leaving room for header and footer
