@@ -30,6 +30,8 @@ except ImportError:
     LineString = None
     Point = None
 
+# Function removed - now using RailwayAlignment.add_buffer_zone() method instead
+
 # Set page config first
 st.set_page_config(layout="wide")
 
@@ -435,7 +437,32 @@ with main_content:
     
     # Ninth tangent segment
     yellow_ninth_tangent = yellow_alignment.add_tangent("296+93.38", "304+93.02", name="Ninth Tangent")
-
+    
+    # Add custom elevation profile for the Yellow track using station values in hundreds of feet
+    # Convert the dictionary keys from station numbers to feet (multiply by 100)
+    yellow_elevation_dict = {
+        1000: 30,    # Station 10+00: 30 ft above sea level
+        2000: 20,    # Station 20+00: 20 ft above sea level
+        2750: 20,    # Station 27+50: 20 ft above sea level
+        3000: 25,    # Station 30+00: 25 ft above sea level
+        4000: 40,    # Station 40+00: 40 ft above sea level
+        5000: 55,    # Station 50+00: 55 ft above sea level
+        8000: 70,    # Station 80+00: 70 ft above sea level
+        9000: 70,    # Station 90+00: 70 ft above sea level
+        20000: -20,  # Station 200+00: -20 ft above sea level (below sea level)
+        21000: -25,  # Station 210+00: -25 ft above sea level (below sea level)
+        22000: -15,  # Station 220+00: -15 ft above sea level (below sea level)
+        25000: 10,   # Station 250+00: 10 ft above sea level
+        26500: 30,   # Station 265+00: 30 ft above sea level
+        27000: 35,   # Station 270+00: 35 ft above sea level
+        28000: 30,   # Station 280+00: 30 ft above sea level
+        29000: 30,   # Station 290+00: 30 ft above sea level
+        30000: 35,   # Station 300+00: 35 ft above sea level
+        31000: 40    # Station 310+00: 40 ft above sea level
+    }
+    
+    # Generate the elevation profile with points every 5 feet
+    yellow_alignment.generate_custom_elevation_profile(yellow_elevation_dict, interval=5)
     
     # === BLUE TRACK ENGINEERING MODEL ===
     # Create the blue track using the engineering specifications and directly add to map
@@ -924,20 +951,59 @@ with main_content:
     
     # Ninth tangent segment
     northern_yellow_ninth_tangent = northern_yellow_alignment.add_tangent("309+93.38", "317+93.02", name="Ninth Tangent")
-    # Add CSS to disable hover/tooltips on original polylines
+
+    '''
+    # Add CSS to optimize map performance and disable hover/tooltips on original polylines
     css = """
     <style>
     .folium-map .leaflet-pane path:not(.yellow-bridge-overlay) {
         pointer-events: none !important;
     }
+    
+    /* Optimize rendering performance */
+    .leaflet-zoom-anim .leaflet-zoom-animated {
+        will-change: transform;
+    }
+    
+    /* Reduce workload during map interactions */
+    .leaflet-dragging .leaflet-polygon,
+    .leaflet-dragging .leaflet-polyline,
+    .leaflet-zoom-anim .leaflet-polygon,
+    .leaflet-zoom-anim .leaflet-polyline {
+        visibility: hidden !important;
+    }
     </style>
+    
+    <script>
+    // Add event listeners to improve performance during map interaction
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var map = document.querySelector('.folium-map').map;
+            if (map) {
+                // Hide complex elements during zoom/pan to improve performance
+                map.on('zoomstart movestart', function() {
+                    document.querySelector('.folium-map').classList.add('leaflet-dragging');
+                });
+                
+                map.on('zoomend moveend', function() {
+                    document.querySelector('.folium-map').classList.remove('leaflet-dragging');
+                });
+            }
+        }, 1000);
+    });
+    </script>
     """
     
-    # Add the CSS to the map
+    # Add the CSS and script to the map
     m.get_root().html.add_child(folium.Element(css))
-    
+    '''
+
+
     # Add the entire alignment to the map
     if st.session_state.track_visibility["yellow"]:
+        # Add buffer first (will be underneath the track)
+        yellow_alignment.add_track_width_zone(m)
+        
         yellow_alignment.add_to_map(
             m=m, 
             start_ref_point_name="STA_2000", 
@@ -946,13 +1012,61 @@ with main_content:
             hide_technical_info=True  # Hide tangent/curve information
         )
         
+        # Add ground elevation data for the Yellow alignment
+        # Elevation values in feet above sea level
+        yellow_ground_elevations = [
+            (2000, 20),     # Station 20+00: 20 ft above sea level
+            (2500, 22),     # Station 25+00: 22 ft above sea level
+            (3000, 25),     # Station 30+00: 25 ft above sea level
+            (4000, 35),     # Station 40+00: 35 ft above sea level
+            (5000, 50),     # Station 50+00: 50 ft above sea level
+            (6000, 75),     # Station 60+00: 75 ft above sea level
+            (7000, 100),    # Station 70+00: 100 ft above sea level
+            (8000, 150),    # Station 80+00: 150 ft above sea level (start of tunnel)
+            (9000, 200),    # Station 90+00: 200 ft above sea level
+            (10000, 250),   # Station 100+00: 250 ft above sea level
+            (12000, 300),   # Station 120+00: 300 ft above sea level
+            (15000, 350),   # Station 150+00: 350 ft above sea level (middle of tunnel)
+            (18000, 300),   # Station 180+00: 300 ft above sea level
+            (20000, 250),   # Station 200+00: 250 ft above sea level
+            (22600, 200),   # Station 226+00: 200 ft above sea level (end of tunnel)
+            (24000, 150),   # Station 240+00: 150 ft above sea level
+            (26000, 100),   # Station 260+00: 100 ft above sea level
+            (28000, 75),    # Station 280+00: 75 ft above sea level
+            (30493, 50)     # Station 304+93: 50 ft above sea level
+        ]
+        
+        # Set the ground elevation profile for the Yellow alignment directly
+        # Instead of using set_elevation_profile method, set the attribute directly
+        yellow_alignment.elevation_points = sorted(yellow_ground_elevations, key=lambda x: x[0])
+        
         # Define track type sections for the Yellow alignment
         yellow_alignment.add_track_type_section(
             track_type="Yellow Track Initial Tangent",
             start_station="20+00",
             end_station="24+00",
             color="#FFD700",
-            tooltip="Yellow Track"
+            tooltip="Yellow Track",
+            depth_info="At grade"
+        )
+        
+        # Define depth values for the bridge section (height above ground)
+        yellow_bridge_depths = [
+            (2400, -30),    # Station 24+00: 30 ft above ground
+            (3000, -35),    # Station 30+00: 35 ft above ground
+            (4000, -40),    # Station 40+00: 40 ft above ground
+            (5000, -45),    # Station 50+00: 45 ft above ground
+            (6000, -40),    # Station 60+00: 40 ft above ground
+            (7000, -35),    # Station 70+00: 35 ft above ground
+            (7800, -30)     # Station 78+00: 30 ft above ground
+        ]
+        
+        # Generate elevation values for the bridge section
+        yellow_bridge_elevation_values = yellow_alignment.generate_elevation_based_depths(
+            start_station="24+00",
+            end_station="78+00",
+            track_depths=yellow_bridge_depths,
+            interval=100
         )
         
         yellow_alignment.add_track_type_section(
@@ -960,7 +1074,24 @@ with main_content:
             start_station="24+00",
             end_station="78+00",
             color="#FFD700",
-            tooltip="Yellow Track: Bridge"
+            tooltip="Yellow Track: Bridge",
+            depth_info="+30 to +45 ft above ground",
+            elevation_values=yellow_bridge_elevation_values
+        )
+        
+        # Define depth values for cut and cover section
+        yellow_cut_cover_depths = [
+            (7800, 25),     # Station 78+00: 25 ft below ground
+            (8200, 40),     # Station 82+00: 40 ft below ground
+            (8600, 50)      # Station 86+00: 50 ft below ground
+        ]
+        
+        # Generate elevation values for cut and cover section
+        yellow_cut_cover_elevation_values = yellow_alignment.generate_elevation_based_depths(
+            start_station="78+00",
+            end_station="86+00",
+            track_depths=yellow_cut_cover_depths,
+            interval=100
         )
         
         yellow_alignment.add_track_type_section(
@@ -968,7 +1099,29 @@ with main_content:
             start_station="78+00",
             end_station="86+00",
             color="#FFD700",
-            tooltip="Yellow Track: Cut and Cover Tunnel"
+            tooltip="Yellow Track: Cut and Cover Tunnel",
+            depth_info="-25 to -50 ft below ground",
+            elevation_values=yellow_cut_cover_elevation_values
+        )
+        
+        # Generate detailed depth values for the bored tunnel section
+        yellow_tunnel_depths = [
+            (8600, 50),     # Station 86+00: 50 ft below ground
+            (9000, 60),     # Station 90+00: 60 ft below ground
+            (10000, 80),    # Station 100+00: 80 ft below ground
+            (12000, 100),   # Station 120+00: 100 ft below ground
+            (15000, 150),   # Station 150+00: 150 ft below ground (deepest point)
+            (18000, 120),   # Station 180+00: 120 ft below ground
+            (20000, 100),   # Station 200+00: 100 ft below ground
+            (22600, 80)     # Station 226+00: 80 ft below ground
+        ]
+        
+        # Generate elevation values for bored tunnel section
+        yellow_tunnel_elevation_values = yellow_alignment.generate_elevation_based_depths(
+            start_station="86+00",
+            end_station="226+00",
+            track_depths=yellow_tunnel_depths,
+            interval=100
         )
         
         yellow_alignment.add_track_type_section(
@@ -976,7 +1129,24 @@ with main_content:
             start_station="86+00",
             end_station="226+00",
             color="#FFD700",
-            tooltip="Yellow Track: Bored Tunnel"
+            tooltip="Yellow Track: Bored Tunnel",
+            depth_info="-120 to -150 ft below ground",
+            elevation_values=yellow_tunnel_elevation_values
+        )
+        
+        # Define depth values for the second cut and cover section
+        yellow_cut_cover2_depths = [
+            (22600, 80),    # Station 226+00: 80 ft below ground
+            (23000, 40),    # Station 230+00: 40 ft below ground
+            (23400, 25)     # Station 234+00: 25 ft below ground
+        ]
+        
+        # Generate elevation values for second cut and cover section
+        yellow_cut_cover2_elevation_values = yellow_alignment.generate_elevation_based_depths(
+            start_station="226+00",
+            end_station="234+00",
+            track_depths=yellow_cut_cover2_depths,
+            interval=100
         )
         
         yellow_alignment.add_track_type_section(
@@ -984,7 +1154,24 @@ with main_content:
             start_station="226+00",
             end_station="234+00",
             color="#FFD700",
-            tooltip="Yellow Track: Cut and Cover Tunnel"
+            tooltip="Yellow Track: Cut and Cover Tunnel",
+            depth_info="-25 to -40 ft below ground",
+            elevation_values=yellow_cut_cover2_elevation_values
+        )
+        
+        # Define depth values for U-Section
+        yellow_u_section_depths = [
+            (23400, 25),    # Station 234+00: 25 ft below ground
+            (24500, 20),    # Station 245+00: 20 ft below ground
+            (25500, 15)     # Station 255+00: 15 ft below ground
+        ]
+        
+        # Generate elevation values for U-Section
+        yellow_u_section_elevation_values = yellow_alignment.generate_elevation_based_depths(
+            start_station="234+00",
+            end_station="255+00",
+            track_depths=yellow_u_section_depths,
+            interval=100
         )
         
         yellow_alignment.add_track_type_section(
@@ -992,7 +1179,24 @@ with main_content:
             start_station="234+00",
             end_station="255+00",
             color="#FFD700",
-            tooltip="Yellow Track: U-Section"
+            tooltip="Yellow Track: U-Section",
+            depth_info="-15 to -25 ft below ground",
+            elevation_values=yellow_u_section_elevation_values
+        )
+        
+        # Define depth values for final tangent (at grade)
+        yellow_final_tangent_depths = [
+            (25500, 0),     # Station 255+00: At grade
+            (28000, 0),     # Station 280+00: At grade
+            (30493, 0)      # Station 304+93: At grade
+        ]
+        
+        # Generate elevation values for final tangent
+        yellow_final_tangent_elevation_values = yellow_alignment.generate_elevation_based_depths(
+            start_station="255+00",
+            end_station="304+93.02",
+            track_depths=yellow_final_tangent_depths,
+            interval=100
         )
         
         yellow_alignment.add_track_type_section(
@@ -1000,12 +1204,18 @@ with main_content:
             start_station="255+00",
             end_station="304+93.02",
             color="#FFD700",
-            tooltip="Yellow Track"
+            tooltip="Yellow Track",
+            depth_info="At grade",
+            elevation_values=yellow_final_tangent_elevation_values
         )
     
     # Render the yellow track type sections
     if st.session_state.track_visibility["yellow"]:
+        # Render the track type sections for detailed tooltips
         yellow_alignment.render_track_type_sections(m)
+        
+        # Add 94-foot buffer around the yellow track
+        yellow_alignment.add_track_width_zone(m)
     
     # Add the blue alignment to the map with hidden technical details
     if st.session_state.track_visibility["blue"]:
@@ -1023,7 +1233,8 @@ with main_content:
             start_station="5+00",
             end_station="14+00",
             color="blue",
-            tooltip="Blue Track"
+            tooltip="Blue Track",
+            depth_info="At grade"
         )
         
         blue_alignment.add_track_type_section(
@@ -1031,7 +1242,8 @@ with main_content:
             start_station="14+00",
             end_station="20+00",
             color="blue",
-            tooltip="Blue Track: Floodwalls"
+            tooltip="Blue Track: Floodwalls",
+            depth_info="At grade with flood protection"
         )
         
         blue_alignment.add_track_type_section(
@@ -1039,7 +1251,8 @@ with main_content:
             start_station="20+00",
             end_station="26+00",
             color="blue",
-            tooltip="Blue Track: U-Section"
+            tooltip="Blue Track: U-Section",
+            depth_info="-15 to -25 ft below ground"
         )
         
         blue_alignment.add_track_type_section(
@@ -1047,15 +1260,39 @@ with main_content:
             start_station="26+00",
             end_station="30+00",
             color="blue",
-            tooltip="Blue Track: Cut and Cover Tunnel"
+            tooltip="Blue Track: Cut and Cover Tunnel",
+            depth_info="-25 to -40 ft below ground"
         )
+        
+        # Generate detailed depth values for the Blue Track bored tunnel section
+        blue_tunnel_depths = blue_alignment.generate_depth_values(
+            start_station="30+00", 
+            end_station="195+00",
+            depth_start=-40,    # Starting depth at 40 feet below ground
+            depth_end=-60,      # Ending depth at 60 feet below ground
+            interval=100        # Generate a depth value every 100 feet
+        )
+        
+        # Add variations to show tunnel profile with deepest point under Crest Canyon
+        for i, (station, depth) in enumerate(blue_tunnel_depths):
+            if 5000 < station < 14000:  # Between stations 50+00 and 140+00 (Crest Canyon area)
+                # Calculate distance from the center of Crest Canyon (around station 95+00)
+                distance_from_center = abs(station - 9500)  # Distance from station 95+00
+                max_additional_depth = -60  # Additional 60 feet at the deepest point
+                
+                # Calculate additional depth based on distance from center (parabolic profile)
+                if distance_from_center < 4500:
+                    additional_depth = max_additional_depth * (1 - (distance_from_center / 4500)**2)
+                    blue_tunnel_depths[i] = (station, depth + additional_depth)
         
         blue_alignment.add_track_type_section(
             track_type="Bored Tunnel",
             start_station="30+00",
             end_station="195+00",
             color="blue",
-            tooltip="Blue Track: Bored Tunnel"
+            tooltip="Blue Track: Bored Tunnel",
+            depth_info="-100 to -120 ft below ground",
+            depth_values=blue_tunnel_depths
         )
         
         blue_alignment.add_track_type_section(
@@ -1063,7 +1300,8 @@ with main_content:
             start_station="195+00",
             end_station="204+00",
             color="blue",
-            tooltip="Blue Track: Cut and Cover Tunnel"
+            tooltip="Blue Track: Cut and Cover Tunnel",
+            depth_info="-25 to -40 ft below ground"
         )
         
         blue_alignment.add_track_type_section(
@@ -1071,7 +1309,8 @@ with main_content:
             start_station="204+00",
             end_station="224+00",
             color="blue",
-            tooltip="Blue Track: U-Section"
+            tooltip="Blue Track: U-Section",
+            depth_info="-15 to -25 ft below ground"
         )
 
         blue_alignment.add_track_type_section(
@@ -1079,11 +1318,15 @@ with main_content:
             start_station="224+00",
             end_station="274+32.35",
             color="blue",
-            tooltip="Blue Track"
+            tooltip="Blue Track",
+            depth_info="At grade"
         )
         
         # Render the blue track type sections
         blue_alignment.render_track_type_sections(m)
+        
+        # Add 94-foot buffer around the blue track
+        blue_alignment.add_track_width_zone(m)
     
     # Add the purple alignment to the map
     if st.session_state.track_visibility["purple"]:
@@ -1094,14 +1337,15 @@ with main_content:
             add_markers=False,  # Hide all pin points
             hide_technical_info=True  # Hide tangent/curve information
         )
-        
+
         # Define track type sections for the Purple alignment
         purple_alignment.add_track_type_section(
             track_type="Purple Track Initial Tangent",
             start_station="5+00",
             end_station="11+00",
             color="magenta",
-            tooltip="Purple Track"
+            tooltip="Purple Track",
+            depth_info="At grade"
         )
         
         purple_alignment.add_track_type_section(
@@ -1109,7 +1353,8 @@ with main_content:
             start_station="11+00",
             end_station="19+00",
             color="magenta",
-            tooltip="Purple Track: Floodwalls"
+            tooltip="Purple Track: Floodwalls",
+            depth_info="At grade with flood protection"
         )
         
         purple_alignment.add_track_type_section(
@@ -1117,7 +1362,8 @@ with main_content:
             start_station="19+00",
             end_station="26+00",
             color="magenta",
-            tooltip="Purple Track: U-Section"
+            tooltip="Purple Track: U-Section",
+            depth_info="-15 to -25 ft below ground"
         )
         
         purple_alignment.add_track_type_section(
@@ -1125,15 +1371,39 @@ with main_content:
             start_station="26+00",
             end_station="30+00",
             color="magenta",
-            tooltip="Purple Track: Cut and Cover Tunnel"
+            tooltip="Purple Track: Cut and Cover Tunnel",
+            depth_info="-25 to -40 ft below ground"
         )
+        
+        # Generate detailed depth values for the Purple Track bored tunnel section
+        purple_tunnel_depths = purple_alignment.generate_depth_values(
+            start_station="30+00", 
+            end_station="129+00",
+            depth_start=-40,    # Starting depth at 40 feet below ground
+            depth_end=-35,      # Ending depth at 35 feet below ground
+            interval=100        # Generate a depth value every 100 feet
+        )
+        
+        # Add variations to show tunnel profile with deepest point under Camino Del Mar
+        for i, (station, depth) in enumerate(purple_tunnel_depths):
+            if 5000 < station < 11000:  # Between stations 50+00 and 110+00 (Camino Del Mar area)
+                # Calculate distance from the center of the tunnel (around station 80+00)
+                distance_from_center = abs(station - 8000)  # Distance from station 80+00
+                max_additional_depth = -45  # Additional 45 feet at the deepest point
+                
+                # Calculate additional depth based on distance from center (parabolic profile)
+                if distance_from_center < 3000:
+                    additional_depth = max_additional_depth * (1 - (distance_from_center / 3000)**2)
+                    purple_tunnel_depths[i] = (station, depth + additional_depth)
         
         purple_alignment.add_track_type_section(
             track_type="Bored Tunnel",
             start_station="30+00",
             end_station="129+00",
             color="magenta",
-            tooltip="Purple Track: Bored Tunnel"
+            tooltip="Purple Track: Bored Tunnel",
+            depth_info="-80 to -110 ft below ground",
+            depth_values=purple_tunnel_depths
         )
         
         purple_alignment.add_track_type_section(
@@ -1141,7 +1411,8 @@ with main_content:
             start_station="129+00",
             end_station="130+00",
             color="magenta",
-            tooltip="Purple Track: Cut and Cover Tunnel"
+            tooltip="Purple Track: Cut and Cover Tunnel",
+            depth_info="-25 to -40 ft below ground"
         )
         
         purple_alignment.add_track_type_section(
@@ -1149,7 +1420,8 @@ with main_content:
             start_station="130+00",
             end_station="133+00",
             color="magenta",
-            tooltip="Purple Track: U-Section"
+            tooltip="Purple Track: U-Section",
+            depth_info="-15 to -25 ft below ground"
         )
         
         purple_alignment.add_track_type_section(
@@ -1157,7 +1429,8 @@ with main_content:
             start_station="133+00",
             end_station="180+00",
             color="magenta",
-            tooltip="Purple Track: Bridge"
+            tooltip="Purple Track: Bridge",
+            depth_info="+25 to +40 ft above ground"
         )
         
         purple_alignment.add_track_type_section(
@@ -1165,7 +1438,8 @@ with main_content:
             start_station="180+00",
             end_station="187+00",
             color="magenta",
-            tooltip="Purple Track"
+            tooltip="Purple Track",
+            depth_info="At grade"
         )
         
         purple_alignment.add_track_type_section(
@@ -1173,7 +1447,8 @@ with main_content:
             start_station="187+00",
             end_station="199+00",
             color="magenta",
-            tooltip="Purple Track: Bridge"
+            tooltip="Purple Track: Bridge",
+            depth_info="+20 to +35 ft above ground"
         )
         
         purple_alignment.add_track_type_section(
@@ -1181,11 +1456,15 @@ with main_content:
             start_station="199+00",
             end_station="280+89.19",
             color="magenta",
-            tooltip="Purple Track"
+            tooltip="Purple Track",
+            depth_info="At grade"
         )
         
         # Render the purple track type sections
         purple_alignment.render_track_type_sections(m)
+        
+        # Add 94-foot buffer around the purple track
+        purple_alignment.add_track_width_zone(m)
     
     # Add the green alignment to the map
     if st.session_state.track_visibility["green"]:
@@ -1203,7 +1482,8 @@ with main_content:
             start_station="5+00",
             end_station="48+00",
             color="green",
-            tooltip="Green Track"
+            tooltip="Green Track",
+            depth_info="At grade"
         )
         
         green_alignment.add_track_type_section(
@@ -1211,7 +1491,8 @@ with main_content:
             start_station="48+00",
             end_station="89+00",
             color="green",
-            tooltip="Green Track: Trench"
+            tooltip="Green Track: Trench",
+            depth_info="-15 to -30 ft below ground"
         )
         
         green_alignment.add_track_type_section(
@@ -1219,7 +1500,8 @@ with main_content:
             start_station="89+00",
             end_station="141+00",
             color="green",
-            tooltip="Green Track"
+            tooltip="Green Track",
+            depth_info="At grade"
         )
         
         green_alignment.add_track_type_section(
@@ -1227,7 +1509,8 @@ with main_content:
             start_station="141+00",
             end_station="184+00",
             color="green",
-            tooltip="Green Track: Bridge"
+            tooltip="Green Track: Bridge",
+            depth_info="+15 to +30 ft above ground"
         )
         
         green_alignment.add_track_type_section(
@@ -1235,7 +1518,8 @@ with main_content:
             start_station="184+00",
             end_station="191+00",
             color="green",
-            tooltip="Green Track"
+            tooltip="Green Track",
+            depth_info="At grade"
         )
         
         green_alignment.add_track_type_section(
@@ -1243,7 +1527,8 @@ with main_content:
             start_station="191+00",
             end_station="203+00",
             color="green",
-            tooltip="Green Track: Bridge"
+            tooltip="Green Track: Bridge",
+            depth_info="+15 to +25 ft above ground"
         )
         
         green_alignment.add_track_type_section(
@@ -1251,11 +1536,15 @@ with main_content:
             start_station="203+00",
             end_station="284+97.94",
             color="green",
-            tooltip="Green Track"
+            tooltip="Green Track",
+            depth_info="At grade"
         )
         
         # Render the green track type sections
         green_alignment.render_track_type_sections(m)
+        
+        # Add 94-foot buffer around the green track
+        green_alignment.add_track_width_zone(m)
     
     # Add the Northern Yellow alignment to the map
     if st.session_state.track_visibility["northern_yellow"]:
@@ -1267,7 +1556,97 @@ with main_content:
             hide_technical_info=True  # Hide tangent/curve information
         )
 
+        # Add a solid base line for the entire northern yellow track
+        folium.PolyLine(
+            locations=northern_yellow_alignment.all_coords,
+            color='orange',
+            weight=7,
+            opacity=0.7,
+            tooltip="Northern Yellow Route"
+        ).add_to(m)
+        
+        # Add animated path for the entire northern yellow track
+        AntPath(
+            locations=northern_yellow_alignment.all_coords,
+            dash_array=[10, 20],
+            delay=800,
+            color='orange',
+            pulseColor='white',
+            paused=False,
+            weight=5,
+            opacity=0.9,
+            tooltip="Northern Yellow Route",
+            className="northern-yellow-route-overlay"
+        ).add_to(m)
+
+        # Define track type sections for the Northern Yellow alignment
+        northern_yellow_alignment.add_track_type_section(
+            track_type="Initial Tangent",
+            start_station="10+00",
+            end_station="19+00",
+            color="orange",
+            tooltip="Northern Yellow Track: Initial Tangent",
+            depth_info="At grade"
+        )
+        
+        northern_yellow_alignment.add_track_type_section(
+            track_type="Bridge",
+            start_station="19+00",
+            end_station="43+00",
+            color="orange",
+            tooltip="Northern Yellow Track: Bridge over San Dieguito River",
+            depth_info="+20 to +35 ft above water level"
+        )
+        
+        northern_yellow_alignment.add_track_type_section(
+            track_type="Cut and Cover Tunnel",
+            start_station="43+00",
+            end_station="65+00",
+            color="orange",
+            tooltip="Northern Yellow Track: Cut and Cover Tunnel",
+            depth_info="-20 to -40 ft below ground"
+        )
+        
+        northern_yellow_alignment.add_track_type_section(
+            track_type="Bored Tunnel",
+            start_station="65+00",
+            end_station="175+00",
+            color="orange",
+            tooltip="Northern Yellow Track: Bored Tunnel",
+            depth_info="-90 to -130 ft below ground"
+        )
+        
+        northern_yellow_alignment.add_track_type_section(
+            track_type="Cut and Cover Tunnel",
+            start_station="175+00",
+            end_station="195+00",
+            color="orange",
+            tooltip="Northern Yellow Track: Cut and Cover Tunnel",
+            depth_info="-20 to -40 ft below ground"
+        )
+        
+        northern_yellow_alignment.add_track_type_section(
+            track_type="U-Section",
+            start_station="195+00",
+            end_station="215+00",
+            color="orange",
+            tooltip="Northern Yellow Track: U-Section",
+            depth_info="-15 to -25 ft below ground"
+        )
+        
+        northern_yellow_alignment.add_track_type_section(
+            track_type="Final Tangent",
+            start_station="215+00",
+            end_station="317+93.02",
+            color="orange",
+            tooltip="Northern Yellow Track: Final Tangent",
+            depth_info="At grade"
+        )
+
         northern_yellow_alignment.render_track_type_sections(m)
+        
+        # Add 94-foot buffer around the northern yellow track
+        northern_yellow_alignment.add_track_width_zone(m)
     
     # Define all portals using the Portal class
     portals = [
@@ -1321,31 +1700,6 @@ with main_content:
             portal.add_to_map(m)
         elif track_alignment == northern_yellow_alignment and st.session_state.track_visibility["northern_yellow"]:
             portal.add_to_map(m)
-    
-    # Add animated path for the Northern Yellow track
-    if northern_yellow_alignment.all_coords:
-        # Add a solid base line
-        folium.PolyLine(
-            locations=northern_yellow_alignment.all_coords,
-            color='orange',
-            weight=7,
-            opacity=0.7,
-            tooltip="Northern Yellow Route"
-        ).add_to(m)
-        
-        # Add animated path
-        AntPath(
-            locations=northern_yellow_alignment.all_coords,
-            dash_array=[10, 20],
-            delay=800,
-            color='orange',
-            pulseColor='white',
-            paused=False,
-            weight=5,
-            opacity=0.9,
-            tooltip="Northern Yellow Route",
-            className="northern-yellow-route-overlay"  # Special class to allow hover
-        ).add_to(m)
     
     # Add boring location markers
     boring_locations_2024 = [
